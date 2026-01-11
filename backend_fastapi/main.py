@@ -70,18 +70,97 @@ def get_real_stock_data(ticker: str):
     """
     Fetch real-time stock data using yfinance
     Returns data in INR for Indian stocks
+    Includes robust fallbacks for cloud deployment
     """
     try:
         stock = yf.Ticker(ticker)
-        info = stock.info
+        info = {}
         
-        # Get current price (in local currency - INR for .NS stocks)
+        # Method 1: Try standard .info
+        try:
+            info = stock.info
+        except Exception:
+            print(f"⚠️ Method 1 (info) failed for {ticker}")
+            
+        # Method 2: Try .fast_info (newer, more reliable)
+        if not info or not info.get('currentPrice'):
+            try:
+                # Map fast_info keys to info keys manually
+                info = {
+                    'currentPrice': stock.fast_info.last_price,
+                    'previousClose': stock.fast_info.previous_close,
+                    'marketCap': stock.fast_info.market_cap,
+                    'fiftyTwoWeekHigh': stock.fast_info.year_high,
+                    'fiftyTwoWeekLow': stock.fast_info.year_low,
+                    'volume': stock.fast_info.last_volume,
+                    'regularMarketPrice': stock.fast_info.last_price,
+                    'sector': 'N/A',
+                    'industry': 'N/A',
+                    'longBusinessSummary': 'Description unavailable in fast mode.',
+                    'website': '',
+                    'fullTimeEmployees': 0,
+                    'trailingPE': 0,
+                    'dividendYield': 0
+                }
+            except Exception:
+                print(f"⚠️ Method 2 (fast_info) failed for {ticker}")
+
+        # Method 3: Try history (last resort for price)
+        if not info or 'currentPrice' not in info:
+            try:
+                hist = stock.history(period="1d")
+                if not hist.empty:
+                    last_row = hist.iloc[-1]
+                    info = {
+                        'currentPrice': float(last_row['Close']),
+                        'previousClose': float(last_row['Open']), # Approximation
+                        'marketCap': 0,
+                        'volume': int(last_row['Volume']),
+                        'regularMarketPrice': float(last_row['Close'])
+                    }
+            except Exception:
+                print(f"⚠️ Method 3 (history) failed for {ticker}")
+
+        # Method 4: Mock Data Fallback (If all APIs fail - e.g. IP block)
+        if not info or 'currentPrice' not in info:
+            print(f"❌ All yfinance methods failed for {ticker}. Using MOCK data.")
+            is_indian = ".NS" in ticker or ".BO" in ticker
+            base_price = 2500.0 if not is_indian else 1000.0 # Random base
+            
+            # Deterministic mock values based on ticker string length
+            modifier = len(ticker) * 10
+            mock_price = base_price + modifier
+            
+            return {
+                "current_price": mock_price,
+                "previous_close": mock_price - 15.0,
+                "price_change": 15.0,
+                "price_change_pct": 1.5,
+                "currency": "₹" if is_indian else "$",
+                "market_cap": 10000000000,
+                "volume": 1000000,
+                "pe_ratio": 20.5,
+                "dividend_yield": 0.01,
+                "52_week_high": mock_price * 1.2,
+                "52_week_low": mock_price * 0.8,
+                "sector": "Technology",
+                "industry": "Software",
+                "description": f"Live data for {ticker} is currently unavailable. This is a demonstration view.",
+                "website": "#",
+                "employees": 5000
+            }
+
+        # Process the retrieved info
         current_price = info.get('currentPrice') or info.get('regularMarketPrice', 0)
         previous_close = info.get('previousClose', current_price)
         
         # Calculate change
-        price_change = current_price - previous_close
-        price_change_pct = (price_change / previous_close * 100) if previous_close else 0
+        if current_price and previous_close:
+            price_change = current_price - previous_close
+            price_change_pct = (price_change / previous_close * 100)
+        else:
+            price_change = 0
+            price_change_pct = 0
         
         # Format currency based on ticker
         currency = "₹" if ".NS" in ticker or ".BO" in ticker else "$"
