@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+python-dotenv
+google-generativeai
+pymupdf
+python-multipart
+yfinance
+rapidfuzz
+httpx
