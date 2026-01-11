@@ -47,9 +47,9 @@ export default function AiChat() {
         setLoading(true)
 
         try {
-            const response = await apiClient.chat(userMessage)
+            const response = await apiClient.chat(userMessage) as any
 
-            if (response.success) {
+            if (response.success && response.response) {
                 setMessages(prev => [...prev, {
                     role: 'assistant',
                     content: response.response,
