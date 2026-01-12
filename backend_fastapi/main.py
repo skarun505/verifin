@@ -483,6 +483,13 @@ async def resolve_company(query: CompanyQuery):
             "IBM": {"name": "International Business Machines", "type": "public", "sector": "Technology", "logo": "https://logo.clearbit.com/ibm.com"},
             "ORCL": {"name": "Oracle Corporation", "type": "public", "sector": "Technology", "logo": "https://logo.clearbit.com/oracle.com"},
             
+            # Private Companies (Restored)
+            "ZOHO": {"name": "Zoho Corporation", "type": "private", "sector": "Software", "logo": "https://logo.clearbit.com/zoho.com"},
+            "BYJU": {"name": "BYJU'S", "type": "private", "sector": "EdTech", "logo": "https://logo.clearbit.com/byjus.com"},
+            "ZEPTO": {"name": "Zepto", "type": "private", "sector": "Quick Commerce", "logo": "https://logo.clearbit.com/zeptonow.com"},
+            "SWIGGY": {"name": "Swiggy", "type": "private", "sector": "Food Tech", "logo": "https://logo.clearbit.com/swiggy.com"},
+            "FLIPKART": {"name": "Flipkart", "type": "private", "sector": "E-commerce", "logo": "https://logo.clearbit.com/flipkart.com"},
+            
             # Indian IT (Expanded)
             "LTIM.NS": {"name": "LTIMindtree Limited", "type": "public", "sector": "IT Services", "logo": "https://logo.clearbit.com/ltimindtree.com"},
             "TECHM.NS": {"name": "Tech Mahindra Limited", "type": "public", "sector": "IT Services", "logo": "https://logo.clearbit.com/techmahindra.com"},
@@ -633,7 +640,50 @@ async def company_overview(query: CompanyQuery):
             return resolution
         
         ticker = resolution["ticker"]
+        company_type = resolution.get("type", "public")
         
+        # Handle Private Companies Explicitly
+        if company_type == "private":
+             return {
+                "success": True,
+                "data": {
+                    "ticker": ticker,
+                    "name": resolution["name"],
+                    "sector": resolution.get("sector", "Technology"),
+                    "industry": "Private Equity",
+                    "type": "Private",
+                    "logo": resolution.get("logo", ""),
+                    "currency": "USD",
+                    
+                    "price": "Private",
+                    "price_value": 0,
+                    "previous_close": "N/A",
+                    "change": "N/A",
+                    "change_pct": "N/A",
+                    
+                    "marketCap": "Private",
+                    "marketCap_value": 0,
+                    "volume": "N/A",
+                    "pe_ratio": "N/A",
+                    "dividend_yield": "N/A",
+                    "52_week_high": "N/A",
+                    "52_week_low": "N/A",
+                    "description": f"{resolution['name']} is a privately held company. Financial data is not publicly traded.",
+                    "website": "",
+                    "employees": "N/A",
+                    "financials": {"note": "Private Company"},
+                    "historical_data": {"share_prices": [], "currency": "USD", "note": "Private Company - No Chart Data"},
+                    "financial_history": [],
+                    "long_term_outlook": {
+                        "company_perspective": f"{resolution['name']} is a leading private player in its sector.",
+                        "sector_perspective": "Private companies often focus on long-term growth.",
+                        "risk_level": "N/A",
+                        "growth_potential": "Unknown",
+                        "last_updated": datetime.now().strftime("%Y-%m-%d")
+                    }
+                }
+             }
+
         # Run blocking yfinance calls in a separate thread to avoid blocking the event loop
         # Use get_running_loop() which is safer in modern asyncio/fastapi
         loop = asyncio.get_running_loop()
