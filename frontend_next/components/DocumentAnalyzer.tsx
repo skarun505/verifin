@@ -72,7 +72,7 @@ export default function DocumentAnalyzer() {
                 backgroundColor: '#0f172a', // Match theme background
                 useCORS: true,
                 logging: false
-            })
+            } as any)
 
             const imgData = canvas.toDataURL('image/png')
             const pdf = new jsPDF({
