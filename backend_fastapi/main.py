@@ -13,6 +13,18 @@ from dotenv import load_dotenv
 import httpx
 from rapidfuzz import fuzz
 import time
+import math
+
+def clean_float(val):
+    """Sanitize float values for JSON compliance (no NaN/Inf)"""
+    try:
+        if val is None: return 0.0
+        f = float(val)
+        if math.isnan(f) or math.isinf(f):
+            return 0.0
+        return f
+    except:
+        return 0.0
 import yfinance as yf
 from datetime import datetime, timedelta
 
@@ -174,6 +186,11 @@ def get_real_stock_data(ticker: str):
         # 3. Final Formatting
         data['currency'] = "₹" if ".NS" in ticker or ".BO" in ticker else "$"
         
+        # Sanitize all float values in data to prevent JSON errors
+        for k, v in data.items():
+            if isinstance(v, float):
+                data[k] = clean_float(v)
+        
         return data
 
     except Exception as e:
@@ -200,8 +217,8 @@ def get_historical_data(ticker: str, years: int = 5):
                 "date": date.strftime("%Y-%m-%d"),
                 "year": date.year,
                 "month": date.month,
-                "price": round(row['Close'], 2),
-                "volume": int(row['Volume'])
+                "price": clean_float(row['Close']),
+                "volume": int(row['Volume']) if not math.isnan(row['Volume']) else 0
             })
         
         return {
@@ -570,8 +587,8 @@ def get_financial_history(ticker: str):
                     
                     history.append({
                         "year": date.year,
-                        "revenue": revenue,
-                        "profit": profit
+                        "revenue": clean_float(revenue),
+                        "profit": clean_float(profit)
                     })
                 except Exception:
                     continue
