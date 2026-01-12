@@ -183,6 +183,29 @@ export default function HomeTab() {
                 </div>
             </div>
 
+            {/* FAQ Section */}
+            <div className="glass p-10 rounded-3xl border border-white/5">
+                <h2 className="text-3xl font-bold text-white mb-8 text-center">Frequently Asked Questions</h2>
+                <div className="grid md:grid-cols-2 gap-8">
+                    <div className="space-y-4">
+                        <h3 className="text-xl font-bold text-white">Is the market data real-time?</h3>
+                        <p className="text-gray-400">Yes, we stream live market ticks from major global exchanges including NSE, BSE, and NASDAQ with minimal latency.</p>
+                    </div>
+                    <div className="space-y-4">
+                        <h3 className="text-xl font-bold text-white">Can I upload any PDF document?</h3>
+                        <p className="text-gray-400">VeriFin's AI is optimized for financial documents like Annual Reports (10-K), Balance Sheets, and Earnings Call Transcripts.</p>
+                    </div>
+                    <div className="space-y-4">
+                        <h3 className="text-xl font-bold text-white">How does the fuzzy matching work?</h3>
+                        <p className="text-gray-400">Our smart search engine uses advanced algorithms to find companies even if you make typos (e.g., "Reliance" finds "Reliance Industries").</p>
+                    </div>
+                    <div className="space-y-4">
+                        <h3 className="text-xl font-bold text-white">Is my data secure?</h3>
+                        <p className="text-gray-400">We prioritize privacy. Uploaded documents are processed in-memory for analysis and are not permanently stored on our servers.</p>
+                    </div>
+                </div>
+            </div>
+
             {/* CTA Section */}
             <div className="glass p-12 rounded-3xl border border-purple-500/30 text-center relative overflow-hidden group">
                 <div className="absolute inset-0 bg-gradient-to-r from-purple-600/20 to-blue-600/20 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
