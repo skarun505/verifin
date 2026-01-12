@@ -90,7 +90,7 @@ export default function Home() {
             {/* Footer */}
             <footer className="glass border-t border-white/10 mt-auto flex-none">
                 <div className="container mx-auto px-4 py-12">
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
                         {/* Brand */}
                         <div className="space-y-4">
                             <div className="flex items-center space-x-2">
@@ -122,24 +122,6 @@ export default function Home() {
                                 <li><a href="#" className="hover:text-purple-400 transition-colors">API Access</a></li>
                                 <li><a href="#" className="hover:text-purple-400 transition-colors">Market Reports</a></li>
                                 <li><a href="#" className="hover:text-purple-400 transition-colors">Privacy Policy</a></li>
-                            </ul>
-                        </div>
-
-                        {/* Contact */}
-                        <div>
-                            <h4 className="text-white font-semibold mb-4">Connect</h4>
-                            <ul className="space-y-2 text-sm text-gray-400">
-                                <li className="flex items-center gap-2">
-                                    <span>📧</span> contact@verifin.ai
-                                </li>
-                                <li className="flex items-center gap-2">
-                                    <span>📍</span> Bangalore, India
-                                </li>
-                                <div className="flex space-x-4 mt-4">
-                                    <a href="#" className="text-gray-400 hover:text-white transition-colors">𝕏</a>
-                                    <a href="#" className="text-gray-400 hover:text-white transition-colors">in</a>
-                                    <a href="#" className="text-gray-400 hover:text-white transition-colors">github</a>
-                                </div>
                             </ul>
                         </div>
                     </div>
