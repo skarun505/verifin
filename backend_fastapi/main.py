@@ -764,15 +764,44 @@ async def company_compare(query: CompanyCompareQuery):
                 "error": error_details
             }
         
+        # Dynamic Comparison Logic
+        c1 = company1_data["data"]
+        c2 = company2_data["data"]
+        
+        # Valuation Analysis
+        pe1 = c1.get("price_value", 0) / (c1.get('pe_ratio') if c1.get('pe_ratio') != "N/A" else 1) # Fallback logic approx
+        # Better to use stored raw values if avail, but we have formatted strings or raw values in 'price_value', 'pe_ratio' (raw float)
+        
+        pe1_val = c1.get("pe_ratio")
+        pe2_val = c2.get("pe_ratio")
+        
+        valuation_msg = "Both companies have similar valuation metrics."
+        if isinstance(pe1_val, (int, float)) and isinstance(pe2_val, (int, float)):
+            if pe1_val > 0 and pe2_val > 0:
+                if pe1_val > pe2_val:
+                    valuation_msg = f"{c1['name']} ({pe1_val}) has a higher P/E ratio than {c2['name']} ({pe2_val}), indicating it may be overvalued or investors expect higher growth."
+                else:
+                    valuation_msg = f"{c2['name']} ({pe2_val}) is trading at a premium compared to {c1['name']} ({pe1_val})."
+        
+        # Growth/Performance Analysis
+        change1 = float(c1['change_pct'].replace('%','').replace('+',''))
+        change2 = float(c2['change_pct'].replace('%','').replace('+',''))
+        
+        growth_msg = "Both companies showing stable performance."
+        if change1 > change2:
+             growth_msg = f"{c1['name']} is showing stronger recent momentum ({c1['change_pct']}) compared to {c2['name']} ({c2['change_pct']})."
+        else:
+             growth_msg = f"{c2['name']} is outperforming {c1['name']} in recent trading with {c2['change_pct']} growth."
+
         comparison = {
             "success": True,
             "company1": company1_data["data"],
             "company2": company2_data["data"],
             "analysis": {
-                "valuation": "Company 1 has higher P/E ratio indicating premium valuation",
-                "growth": "Both companies show strong revenue growth",
-                "risk": "Company 2 has lower debt-to-equity ratio",
-                "recommendation": "Both are strong investments with different risk profiles"
+                "valuation": valuation_msg,
+                "growth": growth_msg,
+                "risk": f"Market Cap: {c1['name']} ({c1['marketCap']}) vs {c2['name']} ({c2['marketCap']}). Larger cap generally implies lower volatility.",
+                "recommendation": f"Consider {c1['name']} for {'growth' if change1 > change2 else 'value'} and {c2['name']} for {'growth' if change2 > change1 else 'stability'}."
             }
         }
         
