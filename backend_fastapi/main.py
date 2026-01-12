@@ -69,70 +69,63 @@ else:
 # ==================== HELPER FUNCTIONS ====================
 def get_real_stock_data(ticker: str):
     """
-    Fetch real-time stock data using yfinance
-    Returns data in INR for Indian stocks
-    Includes robust fallbacks for cloud deployment
+    Fetch real-time stock data using yfinance (Pro Mode)
+    Prioritizes fast_info for reliability and speed.
     """
     try:
         stock = yf.Ticker(ticker)
-        info = {}
+        data = {}
         
-        # Method 1: Try standard .info
+        # 1. Fetch CRITICAL Data using fast_info (Reliable & Fast)
         try:
-            info = stock.info
-        except Exception:
-            print(f"⚠️ Method 1 (info) failed for {ticker}")
+            # fast_info attributes: last_price, previous_close, open, day_high, day_low, ...
+            # accessing these triggers the fetch
+            price = stock.fast_info.last_price
+            prev_close = stock.fast_info.previous_close
             
-        # Method 2: Try .fast_info (newer, more reliable)
-        if not info or not info.get('currentPrice'):
-            try:
-                # Map fast_info keys to info keys manually
-                info = {
-                    'currentPrice': stock.fast_info.last_price,
-                    'previousClose': stock.fast_info.previous_close,
-                    'marketCap': stock.fast_info.market_cap,
-                    'fiftyTwoWeekHigh': stock.fast_info.year_high,
-                    'fiftyTwoWeekLow': stock.fast_info.year_low,
-                    'volume': stock.fast_info.last_volume,
-                    'regularMarketPrice': stock.fast_info.last_price,
-                    'sector': 'N/A',
-                    'industry': 'N/A',
-                    'longBusinessSummary': 'Description unavailable in fast mode.',
-                    'website': '',
-                    'fullTimeEmployees': 0,
-                    'trailingPE': 0,
-                    'dividendYield': 0
-                }
-            except Exception:
-                print(f"⚠️ Method 2 (fast_info) failed for {ticker}")
-
-        # Method 3: Try history (last resort for price)
-        if not info or 'currentPrice' not in info:
+            if price:
+                data['current_price'] = price
+                data['previous_close'] = prev_close
+                data['market_cap'] = stock.fast_info.market_cap or 0
+                data['volume'] = stock.fast_info.last_volume or 0
+                data['52_week_high'] = stock.fast_info.year_high or 0
+                data['52_week_low'] = stock.fast_info.year_low or 0
+                
+                # Calculate change
+                change = price - prev_close
+                change_pct = (change / prev_close) * 100
+                
+                data['price_change'] = change
+                data['price_change_pct'] = change_pct
+            else:
+                raise ValueError("No price in fast_info")
+                
+        except Exception as e:
+            print(f"⚠️ fast_info failed for {ticker}: {e}")
+            # Fallback to history (Method 3 in old code)
             try:
                 hist = stock.history(period="1d")
                 if not hist.empty:
-                    last_row = hist.iloc[-1]
-                    info = {
-                        'currentPrice': float(last_row['Close']),
-                        'previousClose': float(last_row['Open']), # Approximation
-                        'marketCap': 0,
-                        'volume': int(last_row['Volume']),
-                        'regularMarketPrice': float(last_row['Close'])
-                    }
-            except Exception:
-                print(f"⚠️ Method 3 (history) failed for {ticker}")
+                    last = hist.iloc[-1]
+                    data['current_price'] = float(last['Close'])
+                    data['previous_close'] = float(last['Open']) # Approx
+                    data['market_cap'] = 0
+                    data['volume'] = int(last['Volume'])
+                    data['52_week_high'] = 0
+                    data['52_week_low'] = 0
+                    data['price_change'] = data['current_price'] - data['previous_close']
+                    data['price_change_pct'] = (data['price_change']/data['previous_close'])*100
+            except:
+                pass
 
-        # Method 4: Mock Data Fallback (If all APIs fail - e.g. IP block)
-        if not info or 'currentPrice' not in info:
-            print(f"❌ All yfinance methods failed for {ticker}. Using MOCK data.")
-            is_indian = ".NS" in ticker or ".BO" in ticker
-            base_price = 2500.0 if not is_indian else 1000.0 # Random base
-            
-            # Deterministic mock values based on ticker string length
-            modifier = len(ticker) * 10
-            mock_price = base_price + modifier
-            
-            return {
+        # If we still have no price, return Mock or None (logic below will handle)
+        if 'current_price' not in data:
+             print(f"❌ Critical Price Data Missing for {ticker}. Using MOCK data.")
+             is_indian = ".NS" in ticker or ".BO" in ticker
+             base_price = 2500.0 if not is_indian else 1000.0 
+             mock_price = base_price + (len(ticker) * 10)
+             
+             return {
                 "current_price": mock_price,
                 "previous_close": mock_price - 15.0,
                 "price_change": 15.0,
@@ -144,46 +137,45 @@ def get_real_stock_data(ticker: str):
                 "dividend_yield": 0.01,
                 "52_week_high": mock_price * 1.2,
                 "52_week_low": mock_price * 0.8,
-                "sector": "Technology",
-                "industry": "Software",
-                "description": f"Live data for {ticker} is currently unavailable. This is a demonstration view.",
-                "website": "#",
-                "employees": 5000
-            }
+                "sector": "N/A",  
+                "industry": "N/A",
+                "description": f"Real-time data currently unavailable for {ticker}.",
+                "website": "",
+                "employees": 0
+             }
 
-        # Process the retrieved info
-        current_price = info.get('currentPrice') or info.get('regularMarketPrice', 0)
-        previous_close = info.get('previousClose', current_price)
+        # 2. Fetch METADATA using .info (Slow, fragile)
+        # We do this separately so if it fails, we still return the Price data from step 1
+        try:
+            info = stock.info
+            data['sector'] = info.get('sector', 'N/A')
+            data['industry'] = info.get('industry', 'N/A')
+            data['description'] = info.get('longBusinessSummary') or info.get('description') or f"No description available for {ticker}"
+            data['website'] = info.get('website', '')
+            data['employees'] = info.get('fullTimeEmployees', 0)
+            data['pe_ratio'] = info.get('trailingPE') or info.get('forwardPE') or 0
+            data['dividend_yield'] = info.get('dividendYield', 0)
+            
+            # If fast_info missed these (sometimes happens on indices), fill gaps
+            if not data.get('market_cap'): data['market_cap'] = info.get('marketCap', 0)
+            if not data.get('volume'): data['volume'] = info.get('volume', 0)
+
+        except Exception as e:
+            print(f"⚠️ Metadata fetch failed for {ticker}: {e}")
+            # Fill defaults
+            data.setdefault('sector', 'N/A')
+            data.setdefault('industry', 'N/A')
+            data.setdefault('description', f"Details unavailable for {ticker}")
+            data.setdefault('website', '')
+            data.setdefault('employees', 0)
+            data.setdefault('pe_ratio', 0)
+            data.setdefault('dividend_yield', 0)
+
+        # 3. Final Formatting
+        data['currency'] = "₹" if ".NS" in ticker or ".BO" in ticker else "$"
         
-        # Calculate change
-        if current_price and previous_close:
-            price_change = current_price - previous_close
-            price_change_pct = (price_change / previous_close * 100)
-        else:
-            price_change = 0
-            price_change_pct = 0
-        
-        # Format currency based on ticker
-        currency = "₹" if ".NS" in ticker or ".BO" in ticker else "$"
-        
-        return {
-            "current_price": current_price,
-            "previous_close": previous_close,
-            "price_change": price_change,
-            "price_change_pct": price_change_pct,
-            "currency": currency,
-            "market_cap": info.get('marketCap', 0),
-            "volume": info.get('volume', 0),
-            "pe_ratio": info.get('trailingPE', 0),
-            "dividend_yield": info.get('dividendYield', 0),
-            "52_week_high": info.get('fiftyTwoWeekHigh', 0),
-            "52_week_low": info.get('fiftyTwoWeekLow', 0),
-            "sector": info.get('sector', 'N/A'),
-            "industry": info.get('industry', 'N/A'),
-            "description": info.get('longBusinessSummary', 'No description available'),
-            "website": info.get('website', ''),
-            "employees": info.get('fullTimeEmployees', 0)
-        }
+        return data
+
     except Exception as e:
         print(f"Error fetching stock data for {ticker}: {e}")
         return None
