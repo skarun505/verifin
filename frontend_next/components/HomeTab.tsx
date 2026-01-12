@@ -13,7 +13,23 @@ export default function HomeTab() {
                     <p className="text-xl text-gray-300 max-w-2xl mx-auto leading-relaxed">
                         VeriFin unifies real-time market data, AI-driven document analysis, and intelligent comparisons into a single, professional ecosystem.
                     </p>
+                    <div className="flex justify-center gap-4 mt-8">
+                        <div className="px-6 py-2 rounded-full bg-white/5 border border-white/10 text-sm text-gray-300 flex items-center gap-2">
+                            <span className="text-green-400">●</span> Live Market Data
+                        </div>
+                        <div className="px-6 py-2 rounded-full bg-white/5 border border-white/10 text-sm text-gray-300 flex items-center gap-2">
+                            <span className="text-purple-400">●</span> Generative AI
+                        </div>
+                    </div>
                 </div>
+            </div>
+
+            {/* Live Stats Bar */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <StatCard label="Companies Tracked" value="50+" suffix="" delay="0" />
+                <StatCard label="Data Points" value="1M+" suffix="" delay="100" />
+                <StatCard label="Analysis Speed" value="<2s" suffix="" delay="200" />
+                <StatCard label="AI Accuracy" value="99.9" suffix="%" delay="300" />
             </div>
 
             {/* The Process Flow (Detailed View) */}
@@ -104,6 +120,25 @@ export default function HomeTab() {
                 </div>
             </div>
 
+            {/* Audience Section (Use Cases) */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="glass p-8 rounded-2xl border border-white/5 text-center hover:-translate-y-2 transition-transform duration-300">
+                    <div className="text-4xl mb-4">💼</div>
+                    <h3 className="text-xl font-bold text-white mb-2">For Investors</h3>
+                    <p className="text-gray-400 text-sm">Conduct rapid due diligence and spot market trends before the crowd.</p>
+                </div>
+                <div className="glass p-8 rounded-2xl border border-white/5 text-center hover:-translate-y-2 transition-transform duration-300">
+                    <div className="text-4xl mb-4">🎓</div>
+                    <h3 className="text-xl font-bold text-white mb-2">For Students</h3>
+                    <p className="text-gray-400 text-sm">Learn financial analysis with AI-explained concepts and real-world data.</p>
+                </div>
+                <div className="glass p-8 rounded-2xl border border-white/5 text-center hover:-translate-y-2 transition-transform duration-300">
+                    <div className="text-4xl mb-4">📈</div>
+                    <h3 className="text-xl font-bold text-white mb-2">For Analysts</h3>
+                    <p className="text-gray-400 text-sm">Automate the boring parts of data collection and focus on strategy.</p>
+                </div>
+            </div>
+
             {/* Novelty Section */}
             <div className="glass p-12 rounded-3xl border border-blue-500/20 text-center bg-gradient-to-b from-slate-900 to-slate-800">
                 <h2 className="text-3xl font-bold text-white mb-6">Why VeriFin?</h2>
@@ -128,6 +163,17 @@ function ProcessStep({ step, icon, title, desc }: { step: string, icon: string, 
                     <p className="text-sm text-gray-400 leading-relaxed">{desc}</p>
                 </div>
             </div>
+        </div>
+    )
+}
+
+function StatCard({ label, value, suffix, delay }: { label: string, value: string, suffix: string, delay: string }) {
+    return (
+        <div className="glass p-6 rounded-2xl border border-white/5 text-center transform hover:scale-105 transition-transform duration-300">
+            <div className="text-3xl font-bold text-white mb-1 gradient-text-primary">
+                {value}<span className="text-lg text-purple-400">{suffix}</span>
+            </div>
+            <p className="text-xs text-gray-400 uppercase tracking-widest font-semibold">{label}</p>
         </div>
     )
 }

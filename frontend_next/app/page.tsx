@@ -88,12 +88,63 @@ export default function Home() {
             </div>
 
             {/* Footer */}
-            <footer className="glass border-t border-white/10 mt-20">
-                <div className="container mx-auto px-4 py-8">
-                    <div className="text-center text-gray-400">
-                        <p className="text-sm">
-                            © 2026 VeriFin - Financial Intelligence Platform
-                        </p>
+            <footer className="glass border-t border-white/10 mt-auto flex-none">
+                <div className="container mx-auto px-4 py-12">
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
+                        {/* Brand */}
+                        <div className="space-y-4">
+                            <div className="flex items-center space-x-2">
+                                <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center font-bold text-white">V</div>
+                                <span className="text-xl font-bold text-white">VeriFin</span>
+                            </div>
+                            <p className="text-gray-400 text-sm leading-relaxed">
+                                Next-generation financial intelligence platform powered by Generative AI.
+                                Delivering clarity in a complex market.
+                            </p>
+                        </div>
+
+                        {/* Quick Links */}
+                        <div>
+                            <h4 className="text-white font-semibold mb-4">Platform</h4>
+                            <ul className="space-y-2 text-sm text-gray-400">
+                                <li><button onClick={() => setActiveTab('search')} className="hover:text-purple-400 transition-colors">Market Search</button></li>
+                                <li><button onClick={() => setActiveTab('compare')} className="hover:text-purple-400 transition-colors">Comparison Tool</button></li>
+                                <li><button onClick={() => setActiveTab('document')} className="hover:text-purple-400 transition-colors">Document AI</button></li>
+                                <li><button onClick={() => setActiveTab('chat')} className="hover:text-purple-400 transition-colors">AI Assistant</button></li>
+                            </ul>
+                        </div>
+
+                        {/* Resources */}
+                        <div>
+                            <h4 className="text-white font-semibold mb-4">Resources</h4>
+                            <ul className="space-y-2 text-sm text-gray-400">
+                                <li><a href="#" className="hover:text-purple-400 transition-colors">Documentation</a></li>
+                                <li><a href="#" className="hover:text-purple-400 transition-colors">API Access</a></li>
+                                <li><a href="#" className="hover:text-purple-400 transition-colors">Market Reports</a></li>
+                                <li><a href="#" className="hover:text-purple-400 transition-colors">Privacy Policy</a></li>
+                            </ul>
+                        </div>
+
+                        {/* Contact */}
+                        <div>
+                            <h4 className="text-white font-semibold mb-4">Connect</h4>
+                            <ul className="space-y-2 text-sm text-gray-400">
+                                <li className="flex items-center gap-2">
+                                    <span>📧</span> contact@verifin.ai
+                                </li>
+                                <li className="flex items-center gap-2">
+                                    <span>📍</span> Bangalore, India
+                                </li>
+                                <div className="flex space-x-4 mt-4">
+                                    <a href="#" className="text-gray-400 hover:text-white transition-colors">𝕏</a>
+                                    <a href="#" className="text-gray-400 hover:text-white transition-colors">in</a>
+                                    <a href="#" className="text-gray-400 hover:text-white transition-colors">github</a>
+                                </div>
+                            </ul>
+                        </div>
+                    </div>
+                    <div className="border-t border-white/10 pt-8 text-center text-gray-500 text-sm">
+                        <p>© 2026 VeriFin Inc. All rights reserved.</p>
                     </div>
                 </div>
             </footer>
