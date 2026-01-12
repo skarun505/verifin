@@ -525,20 +525,26 @@ async def resolve_company(query: CompanyQuery):
         if len(company_name.split()) == 1 and len(company_name) <= 10:
              try:
                  print(f"🕵️ Attempting direct ticker lookup for: {company_name}")
-                 # Try appending .NS if it looks like Indian stock request (optional, but safer to try raw first)
-                 stock = yf.Ticker(company_name)
-                 # fast_info is cheap check
-                 if stock.fast_info.last_price:
+                 # Use existing helper in thread pool to check validity
+                 loop = asyncio.get_event_loop()
+                 # Try assuming it is a ticker (uppercase)
+                 ticker_check = company_name.upper()
+                 
+                 # Check if we can get data
+                 data = await loop.run_in_executor(None, get_real_stock_data, ticker_check)
+                 
+                 if data:
                      return {
                          "success": True,
-                         "ticker": company_name.upper(),
-                         "name": company_name.upper(), # We might not get name easily without full info
+                         "ticker": ticker_check,
+                         "name": data.get("name", ticker_check), # get_real_stock_data doesn't return name usually, but we can default to ticker
                          "type": "public",
-                         "sector": "N/A",
+                         "sector": data.get("sector", "N/A"),
                          "logo": "",
                          "confidence": 90
                      }
-             except:
+             except Exception as e:
+                 print(f"Fallback check failed: {e}")
                  pass
 
         return {
@@ -619,10 +625,12 @@ async def company_overview(query: CompanyQuery):
         
         ticker = resolution["ticker"]
         
-        # Fetch REAL stock data using yfinance
-        real_data = get_real_stock_data(ticker)
-        historical = get_historical_data(ticker, years=5)
-        financial_history = get_financial_history(ticker)
+        # Run blocking yfinance calls in a separate thread to avoid blocking the event loop
+        loop = asyncio.get_event_loop()
+        
+        real_data = await loop.run_in_executor(None, get_real_stock_data, ticker)
+        historical = await loop.run_in_executor(None, get_historical_data, ticker, 5)
+        financial_history = await loop.run_in_executor(None, get_financial_history, ticker)
         
         if not real_data:
             return {
