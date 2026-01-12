@@ -6,23 +6,24 @@ import CompanyOverview from '@/components/CompanyOverview'
 import CompanyComparison from '@/components/CompanyComparison'
 import AiChat from '@/components/AiChat'
 import DocumentAnalyzer from '@/components/DocumentAnalyzer'
+import HomeTab from '@/components/HomeTab'
 
 export default function Home() {
-    const [activeTab, setActiveTab] = useState('search')
+    const [activeTab, setActiveTab] = useState('home')
     const [selectedCompany, setSelectedCompany] = useState<any>(null)
 
     const tabs = [
-        { id: 'search', label: 'Search' },
-        { id: 'overview', label: 'Overview' },
+        { id: 'home', label: 'Home' },
+        { id: 'search', label: 'Search' }, // Merged Search & Overview
         { id: 'compare', label: 'Compare' },
         { id: 'chat', label: 'AI Chat' },
         { id: 'document', label: 'Documents' },
     ]
 
     return (
-        <main className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
+        <main className="min-h-screen flex flex-col bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
             {/* Header */}
-            <header className="glass border-b border-white/10">
+            <header className="glass border-b border-white/10 flex-none">
                 <div className="container mx-auto px-4 py-6">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-3">

@@ -131,6 +131,37 @@ export default function CompanyComparison() {
 
     const dualChartData = data ? getDualChartData() : []
 
+    // Prepare financial data
+    const getFinancialData = () => {
+        if (!data?.company1?.financial_history || !data?.company2?.financial_history) return []
+
+        const hist1 = data.company1.financial_history
+        const hist2 = data.company2.financial_history
+
+        const years = Array.from(new Set([...hist1.map((h: any) => h.year), ...hist2.map((h: any) => h.year)])).sort()
+
+        return years.map(year => {
+            const h1 = hist1.find((h: any) => h.year === year)
+            const h2 = hist2.find((h: any) => h.year === year)
+            return {
+                year: year.toString(),
+                [`${data.company1.ticker}_Rev`]: h1?.revenue || 0,
+                [`${data.company1.ticker}_Prof`]: h1?.profit || 0,
+                [`${data.company2.ticker}_Rev`]: h2?.revenue || 0,
+                [`${data.company2.ticker}_Prof`]: h2?.profit || 0,
+            }
+        })
+    }
+
+    const financialChartData = data ? getFinancialData() : []
+
+    const formatBillions = (value: number) => {
+        if (value >= 1e12) return (value / 1e12).toFixed(1) + 'T'
+        if (value >= 1e9) return (value / 1e9).toFixed(1) + 'B'
+        if (value >= 1e6) return (value / 1e6).toFixed(1) + 'M'
+        return value.toString()
+    }
+
     return (
         <div className="glass rounded-2xl p-8 shadow-2xl">
             <div className="text-center mb-8">
@@ -243,6 +274,49 @@ export default function CompanyComparison() {
                                     <Line type="monotone" dataKey={data.company2.ticker} stroke="#10b981" strokeWidth={3} name={data.company2.name} dot={false} />
                                 </LineChart>
                             </ResponsiveContainer>
+                        </div>
+                    )}
+
+                    {/* Financial Performance Charts (Revenue & Profit) */}
+                    {financialChartData.length > 0 && (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            {/* Revenue Chart */}
+                            <div className="glass rounded-xl p-6">
+                                <h4 className="text-xl font-bold text-white mb-4">Revenue History</h4>
+                                <ResponsiveContainer width="100%" height={300}>
+                                    <BarChart data={financialChartData}>
+                                        <CartesianGrid strokeDasharray="3 3" stroke="#ffffff20" />
+                                        <XAxis dataKey="year" stroke="#ffffff80" />
+                                        <YAxis stroke="#ffffff80" tickFormatter={formatBillions} />
+                                        <Tooltip
+                                            formatter={(value: any) => formatBillions(value)}
+                                            contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #475569', borderRadius: '8px', color: '#fff' }}
+                                        />
+                                        <Legend />
+                                        <Bar dataKey={`${data.company1.ticker}_Rev`} name={data.company1.ticker} fill="#8b5cf6" />
+                                        <Bar dataKey={`${data.company2.ticker}_Rev`} name={data.company2.ticker} fill="#10b981" />
+                                    </BarChart>
+                                </ResponsiveContainer>
+                            </div>
+
+                            {/* Net Profit Chart */}
+                            <div className="glass rounded-xl p-6">
+                                <h4 className="text-xl font-bold text-white mb-4">Net Profit History</h4>
+                                <ResponsiveContainer width="100%" height={300}>
+                                    <BarChart data={financialChartData}>
+                                        <CartesianGrid strokeDasharray="3 3" stroke="#ffffff20" />
+                                        <XAxis dataKey="year" stroke="#ffffff80" />
+                                        <YAxis stroke="#ffffff80" tickFormatter={formatBillions} />
+                                        <Tooltip
+                                            formatter={(value: any) => formatBillions(value)}
+                                            contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #475569', borderRadius: '8px', color: '#fff' }}
+                                        />
+                                        <Legend />
+                                        <Bar dataKey={`${data.company1.ticker}_Prof`} name={data.company1.ticker} fill="#a78bfa" />
+                                        <Bar dataKey={`${data.company2.ticker}_Prof`} name={data.company2.ticker} fill="#34d399" />
+                                    </BarChart>
+                                </ResponsiveContainer>
+                            </div>
                         </div>
                     )}
 

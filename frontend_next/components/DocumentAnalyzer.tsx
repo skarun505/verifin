@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import jsPDF from 'jspdf'
+import html2canvas from 'html2canvas'
 import { apiClient, API_BASE } from '@/lib/api'
 
 export default function DocumentAnalyzer() {
@@ -9,6 +10,7 @@ export default function DocumentAnalyzer() {
     const [loading, setLoading] = useState(false)
     const [analysis, setAnalysis] = useState<any>(null)
     const [error, setError] = useState('')
+    const [downloading, setDownloading] = useState(false)
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
@@ -56,101 +58,50 @@ export default function DocumentAnalyzer() {
         }
     }
 
-    const downloadPDFReport = () => {
+    const downloadPDFReport = async () => {
         if (!analysis) return
+        setDownloading(true)
 
-        const doc = new jsPDF()
-        const pageWidth = doc.internal.pageSize.getWidth()
-        let y = 20
+        try {
+            const input = document.getElementById('analysis-report')
+            if (!input) return
 
-        // Title
-        doc.setFontSize(22)
-        doc.setTextColor(41, 98, 255) // Blue
-        doc.text('VeriFin Analysis Report', pageWidth / 2, y, { align: 'center' })
-        y += 15
-
-        // Metadata
-        doc.setFontSize(10)
-        doc.setTextColor(100)
-        doc.text(`Generated on: ${new Date().toLocaleString()}`, pageWidth / 2, y, { align: 'center' })
-        doc.text(`File: ${file?.name || 'Unknown'}`, pageWidth / 2, y + 6, { align: 'center' })
-        y += 20
-
-        // Divider
-        doc.setDrawColor(200)
-        doc.line(15, y, pageWidth - 15, y)
-        y += 15
-
-        // Document Info
-        doc.setFontSize(14)
-        doc.setTextColor(0)
-        doc.text('📄 Document Information', 15, y)
-        y += 10
-        doc.setFontSize(11)
-        doc.text(`• Type: ${analysis.document_type}`, 20, y)
-        doc.text(`• Company: ${analysis.company}`, 20, y + 6)
-        doc.text(`• Sentiment: ${analysis.sentiment}`, 20, y + 12)
-        y += 25
-
-        // Financial Data
-        if (analysis.financial_data) {
-            doc.setFontSize(14)
-            doc.text('💰 Key Financial Metrics', 15, y)
-            y += 10
-            doc.setFontSize(11)
-            Object.entries(analysis.financial_data).forEach(([key, value]) => {
-                const formattedKey = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
-                doc.text(`• ${formattedKey}: ${value}`, 20, y)
-                y += 6
+            // Capture the visual report
+            const canvas = await html2canvas(input, {
+                scale: 2,
+                backgroundColor: '#0f172a', // Match theme background
+                useCORS: true,
+                logging: false
             })
-            y += 10
-        }
 
-        // Summary
-        doc.setFontSize(14)
-        doc.text('📋 Executive Summary', 15, y)
-        y += 10
-        doc.setFontSize(11)
-        const summaryLines = doc.splitTextToSize(analysis.summary, pageWidth - 30)
-        doc.text(summaryLines, 20, y)
-        y += (summaryLines.length * 6) + 10
-
-        // Insights
-        if (analysis.insights && analysis.insights.length > 0) {
-            // Check if we need a new page
-            if (y > 230) {
-                doc.addPage()
-                y = 20
-            }
-            doc.setFontSize(14)
-            doc.text('💡 Strategic Insights', 15, y)
-            y += 10
-            doc.setFontSize(11)
-            analysis.insights.forEach((insight: any) => {
-                doc.setFont('helvetica', 'bold')
-                doc.text(`• ${insight.title}`, 20, y)
-                doc.setFont('helvetica', 'normal')
-                const descLines = doc.splitTextToSize(insight.description, pageWidth - 40)
-                doc.text(descLines, 25, y + 5)
-                y += (descLines.length * 5) + 10
-
-                if (y > 270) {
-                    doc.addPage()
-                    y = 20
-                }
+            const imgData = canvas.toDataURL('image/png')
+            const pdf = new jsPDF({
+                orientation: 'p',
+                unit: 'mm',
+                format: 'a4'
             })
-        }
 
-        // Footer
-        const pageCount = doc.getNumberOfPages()
-        for (let i = 1; i <= pageCount; i++) {
-            doc.setPage(i)
-            doc.setFontSize(8)
-            doc.setTextColor(150)
-            doc.text('VeriFin - AI Financial Intelligence Platform', pageWidth / 2, 285, { align: 'center' })
-        }
+            const imgProps = pdf.getImageProperties(imgData)
+            const pdfWidth = pdf.internal.pageSize.getWidth()
+            const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width
 
-        doc.save(`${file?.name.replace('.pdf', '')}_Analysis_Report.pdf`)
+            // Add Header
+            pdf.setFillColor(15, 23, 42) // Slate 900
+            pdf.rect(0, 0, pdfWidth, 20, 'F')
+            pdf.setFontSize(16)
+            pdf.setTextColor(255, 255, 255)
+            pdf.text('VeriFin Analysis Report', 105, 12, { align: 'center' })
+
+            // Add Image
+            pdf.addImage(imgData, 'PNG', 0, 25, pdfWidth, pdfHeight)
+
+            pdf.save(`${file?.name.replace('.pdf', '')}_Analysis.pdf`)
+        } catch (error) {
+            console.error('PDF Generation Error:', error)
+            alert('Failed to generate PDF')
+        } finally {
+            setDownloading(false)
+        }
     }
 
     return (
@@ -176,7 +127,7 @@ export default function DocumentAnalyzer() {
                         id="file-upload"
                     />
                     <label htmlFor="file-upload" className="cursor-pointer">
-                        <div className="text-6xl mb-4 text-white/50">File Upload</div>
+                        <div className="text-6xl mb-4 text-white/50">📄</div>
                         <p className="text-2xl font-semibold text-white mb-2">
                             {file ? file.name : 'Choose PDF File'}
                         </p>
@@ -192,7 +143,7 @@ export default function DocumentAnalyzer() {
                 {file && (
                     <div className="mt-6 flex items-center justify-between p-4 rounded-xl bg-white/10">
                         <div className="flex items-center gap-3">
-                            <span className="text-3xl text-white/50">Full PDF</span>
+                            <span className="text-3xl text-white/50">📄</span>
                             <div>
                                 <p className="text-white font-semibold">{file.name}</p>
                                 <p className="text-gray-400 text-sm">{(file.size / 1024).toFixed(2)} KB</p>
@@ -216,76 +167,80 @@ export default function DocumentAnalyzer() {
                 </div>
             )}
 
-            {/* Loading */}
+            {/* Loading - Fixed Spinner */}
             {loading && (
                 <div className="glass rounded-2xl p-12 text-center">
-                    <div className="animate-spin text-6xl mb-4 text-purple-500">Loading...</div>
-                    <p className="text-gray-300">Analyzing document with AI...</p>
-                    <p className="text-gray-400 text-sm mt-2">Extracting text, financial data, and insights</p>
+                    <div className="w-16 h-16 border-4 border-purple-500 border-t-transparent rounded-full animate-spin mx-auto mb-6"></div>
+                    <div className="text-xl font-semibold text-white mb-2">Analyzing Document...</div>
+                    <p className="text-gray-400 text-sm">Extracting text, financial data, and insights</p>
                 </div>
             )}
 
             {/* Analysis Results */}
             {analysis && !loading && (
                 <div className="space-y-6">
-                    {/* Document Info */}
-                    <div className="glass rounded-2xl p-8">
-                        <h3 className="text-2xl font-bold text-white mb-6">Document Information</h3>
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                            <InfoCard icon="Type" label="Type" value={analysis.document_type} />
-                            <InfoCard icon="Words" label="Words" value={analysis.word_count?.toLocaleString() || 'N/A'} />
-                            <InfoCard icon="Chars" label="Characters" value={analysis.text_length?.toLocaleString() || 'N/A'} />
-                            <InfoCard icon="Sentiment" label="Sentiment" value={analysis.sentiment} />
-                        </div>
-                    </div>
-
-                    {/* Summary */}
-                    <div className="glass rounded-2xl p-8 bg-gradient-to-br from-blue-500/20 to-purple-500/20 border border-blue-500/50">
-                        <h3 className="text-2xl font-bold text-white mb-4">Summary</h3>
-                        <p className="text-gray-200 leading-relaxed">{analysis.summary}</p>
-                    </div>
-
-                    {/* Financial Data */}
-                    {analysis.financial_data && Object.keys(analysis.financial_data).length > 0 && (
+                    {/* Capture Wrapper */}
+                    <div id="analysis-report" className="space-y-6 p-4 rounded-xl">
+                        {/* Document Info */}
                         <div className="glass rounded-2xl p-8">
-                            <h3 className="text-2xl font-bold text-white mb-6">Extracted Financial Data</h3>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                {Object.entries(analysis.financial_data).map(([key, value]: [string, any]) => (
-                                    <div key={key} className="p-4 rounded-xl bg-green-500/20 border border-green-500/50">
-                                        <p className="text-green-300 text-sm mb-1">{key.replace('_', ' ')}</p>
-                                        <p className="text-2xl font-bold text-white">₹{value}</p>
-                                    </div>
-                                ))}
+                            <h3 className="text-2xl font-bold text-white mb-6">Document Information</h3>
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                <InfoCard icon="📝" label="Type" value={analysis.document_type} />
+                                <InfoCard icon="📊" label="Words" value={analysis.word_count?.toLocaleString() || 'N/A'} />
+                                <InfoCard icon="📋" label="Characters" value={analysis.text_length?.toLocaleString() || 'N/A'} />
+                                <InfoCard icon="💡" label="Sentiment" value={analysis.sentiment} />
                             </div>
                         </div>
-                    )}
 
-                    {/* Insights */}
-                    {analysis.insights && analysis.insights.length > 0 && (
-                        <div className="glass rounded-2xl p-8">
-                            <h3 className="text-2xl font-bold text-white mb-6">Key Insights</h3>
-                            <div className="space-y-4">
-                                {analysis.insights.map((insight: any, idx: number) => (
-                                    <div key={idx} className="flex items-start gap-4 p-4 rounded-xl bg-white/5 border border-white/10">
-                                        <span className="text-4xl">{insight.icon}</span>
-                                        <div className="flex-1">
-                                            <h4 className="text-lg font-semibold text-white mb-1">{insight.title}</h4>
-                                            <p className="text-gray-300">{insight.description}</p>
+                        {/* Summary */}
+                        <div className="glass rounded-2xl p-8 bg-gradient-to-br from-blue-500/20 to-purple-500/20 border border-blue-500/50">
+                            <h3 className="text-2xl font-bold text-white mb-4">Summary</h3>
+                            <p className="text-gray-200 leading-relaxed text-justify">{analysis.summary}</p>
+                        </div>
+
+                        {/* Financial Data */}
+                        {analysis.financial_data && Object.keys(analysis.financial_data).length > 0 && (
+                            <div className="glass rounded-2xl p-8">
+                                <h3 className="text-2xl font-bold text-white mb-6">Extracted Financial Data</h3>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    {Object.entries(analysis.financial_data).map(([key, value]: [string, any]) => (
+                                        <div key={key} className="p-4 rounded-xl bg-green-500/20 border border-green-500/50 flex justify-between items-center">
+                                            <span className="text-green-300 text-sm capitalize">{key.replace(/_/g, ' ')}</span>
+                                            <span className="text-2xl font-bold text-white">₹{value}</span>
                                         </div>
-                                    </div>
-                                ))}
+                                    ))}
+                                </div>
                             </div>
-                        </div>
-                    )}
+                        )}
+
+                        {/* Insights */}
+                        {analysis.insights && analysis.insights.length > 0 && (
+                            <div className="glass rounded-2xl p-8">
+                                <h3 className="text-2xl font-bold text-white mb-6">Key Insights</h3>
+                                <div className="space-y-4">
+                                    {analysis.insights.map((insight: any, idx: number) => (
+                                        <div key={idx} className="flex items-start gap-4 p-4 rounded-xl bg-white/5 border border-white/10">
+                                            <span className="text-2xl mt-1">✨</span>
+                                            <div className="flex-1">
+                                                <h4 className="text-lg font-semibold text-white mb-1">{insight.title}</h4>
+                                                <p className="text-gray-300">{insight.description}</p>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                    </div>
 
                     {/* Download Report */}
-                    <div className="text-center">
+                    <div className="text-center pb-8">
                         <button
                             onClick={downloadPDFReport}
-                            className="px-8 py-4 gradient-success rounded-xl font-semibold text-white hover:shadow-lg transition-all transform hover:scale-105 flex items-center gap-2 mx-auto"
+                            disabled={downloading}
+                            className="px-8 py-4 gradient-success rounded-xl font-semibold text-white hover:shadow-lg transition-all transform hover:scale-105 flex items-center gap-2 mx-auto disabled:opacity-50"
                         >
-                            <span className="text-xl"></span>
-                            Download Analysis Report
+                            <span className="text-xl mr-2">{downloading ? '⏳' : '📥'}</span>
+                            {downloading ? 'Generating PDF...' : 'Download Analysis Report'}
                         </button>
                     </div>
 
@@ -305,7 +260,7 @@ export default function DocumentAnalyzer() {
                 </div>
             )}
 
-            {/* Help Section */}
+            {/* Help Section when no analysis */}
             {!analysis && !loading && (
                 <div className="glass rounded-2xl p-8">
                     <h3 className="text-xl font-bold text-white mb-4">What can this do?</h3>
@@ -337,12 +292,12 @@ export default function DocumentAnalyzer() {
     )
 }
 
-function InfoCard({ icon, label, value }: { icon: string; label: string; value: string | number }) {
+function InfoCard({ icon, label, value }: { icon: any, label: string, value: string }) {
     return (
-        <div className="p-4 rounded-xl bg-white/5 border border-white/10 text-center">
-            <div className="text-xl font-bold mb-2 text-white/50">{icon}</div>
-            <p className="text-gray-400 text-sm mb-1">{label}</p>
-            <p className="text-xl font-bold text-white">{value}</p>
+        <div className="bg-white/5 rounded-xl p-4 text-center">
+            <div className="text-2xl mb-2 text-purple-400">{icon}</div>
+            <p className="text-sm text-gray-400 mb-1">{label}</p>
+            <p className="text-lg font-bold text-white">{value}</p>
         </div>
     )
 }
