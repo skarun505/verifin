@@ -3,12 +3,9 @@ import React from 'react';
 export default function HomeTab() {
     return (
         <div className="space-y-16 pb-12 w-full">
-            {/* Visual Header */}
-            <div className="text-gray-400 text-xs text-center uppercase tracking-wide mb-4 pt-4">Welcome to VeriFin</div>
-
             {/* Market Ticker */}
             <div className="overflow-hidden bg-black/20 backdrop-blur-sm border-y border-white/5 py-2 -mx-4 md:-mx-8">
-                <div className="flex justify-between items-center text-xs md:text-sm font-mono text-gray-400 whitespace-nowrap overflow-x-auto px-4 gap-8">
+                <div className="flex justify-between items-center text-xs md:text-sm font-mono text-gray-400 whitespace-nowrap overflow-x-auto scrollbar-hide px-4 gap-8">
                     <span className="flex items-center gap-2"><span className="text-green-400">▲</span> NIFTY 50 <span className="text-white">22,145.60</span> (+0.85%)</span>
                     <span className="flex items-center gap-2"><span className="text-green-400">▲</span> SENSEX <span className="text-white">73,158.20</span> (+0.72%)</span>
                     <span className="flex items-center gap-2"><span className="text-red-400">▼</span> BANKNIFTY <span className="text-white">46,580.00</span> (-0.30%)</span>
