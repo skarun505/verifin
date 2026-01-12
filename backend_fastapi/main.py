@@ -518,7 +518,7 @@ async def resolve_company(query: CompanyQuery):
              try:
                  print(f"🕵️ Attempting direct ticker lookup for: {company_name}")
                  # Use existing helper in thread pool to check validity
-                 loop = asyncio.get_event_loop()
+                 loop = asyncio.get_running_loop()
                  # Try assuming it is a ticker (uppercase)
                  ticker_check = company_name.upper()
                  
@@ -618,11 +618,15 @@ async def company_overview(query: CompanyQuery):
         ticker = resolution["ticker"]
         
         # Run blocking yfinance calls in a separate thread to avoid blocking the event loop
-        loop = asyncio.get_event_loop()
+        # Use get_running_loop() which is safer in modern asyncio/fastapi
+        loop = asyncio.get_running_loop()
         
-        real_data = await loop.run_in_executor(None, get_real_stock_data, ticker)
-        historical = await loop.run_in_executor(None, get_historical_data, ticker, 5)
-        financial_history = await loop.run_in_executor(None, get_financial_history, ticker)
+        # Execute all 3 fetches in PARALLEL for maximum speed
+        t1 = loop.run_in_executor(None, get_real_stock_data, ticker)
+        t2 = loop.run_in_executor(None, get_historical_data, ticker, 5)
+        t3 = loop.run_in_executor(None, get_financial_history, ticker)
+        
+        real_data, historical, financial_history = await asyncio.gather(t1, t2, t3)
         
         if not real_data:
             return {
