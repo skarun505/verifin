@@ -60,6 +60,10 @@ export default function Home() {
             {/* Main Content */}
             <div className="container mx-auto px-4 py-8">
                 <div className="max-w-6xl mx-auto">
+                    {activeTab === 'home' && (
+                        <HomeTab />
+                    )}
+
                     {activeTab === 'search' && (
                         <CompanySearch
                             onCompanySelect={(company) => {
