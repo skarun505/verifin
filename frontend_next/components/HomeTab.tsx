@@ -2,7 +2,10 @@ import React from 'react';
 
 export default function HomeTab() {
     return (
-        <div className="space-y-16 animate-fadeIn pb-12">
+        <div className="space-y-16 pb-12 w-full">
+            {/* Visual Header */}
+            <div className="text-gray-400 text-xs text-center uppercase tracking-wide mb-4 pt-4">Welcome to VeriFin</div>
+
             {/* Market Ticker */}
             <div className="overflow-hidden bg-black/20 backdrop-blur-sm border-y border-white/5 py-2 -mx-4 md:-mx-8">
                 <div className="flex justify-between items-center text-xs md:text-sm font-mono text-gray-400 whitespace-nowrap overflow-x-auto px-4 gap-8">
