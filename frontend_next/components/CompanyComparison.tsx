@@ -32,7 +32,7 @@ export default function CompanyComparison() {
             if (response.success) {
                 setData(response)
             } else {
-                setError(response.message || 'Comparison failed')
+                setError(response.message || response.error || 'Comparison failed')
             }
         } catch (err: any) {
             setError(err.message || 'Request failed')

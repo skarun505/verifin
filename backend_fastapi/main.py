@@ -8,6 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional, List, Dict, Any
 import os
+import asyncio
 from dotenv import load_dotenv
 import httpx
 from rapidfuzz import fuzz
@@ -712,14 +713,22 @@ async def company_compare(query: CompanyCompareQuery):
     Compare two companies side by side
     """
     try:
-        # Resolve both companies
-        company1_data = await company_overview(CompanyQuery(query=query.company1))
-        company2_data = await company_overview(CompanyQuery(query=query.company2))
+        # Run both requests in parallel to prevent timeouts
+        task1 = company_overview(CompanyQuery(query=query.company1))
+        task2 = company_overview(CompanyQuery(query=query.company2))
+        
+        company1_data, company2_data = await asyncio.gather(task1, task2)
         
         if not company1_data.get("success") or not company2_data.get("success"):
+            msg1 = company1_data.get("message", "Unknown error")
+            msg2 = company2_data.get("message", "Unknown error")
+            failed_company = query.company1 if not company1_data.get("success") else query.company2
+            error_details = msg1 if not company1_data.get("success") else msg2
+            
             return {
                 "success": False,
-                "message": "One or both companies not found"
+                "message": f"Could not find or fetch data for {failed_company}",
+                "error": error_details
             }
         
         comparison = {
