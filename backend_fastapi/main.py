@@ -219,6 +219,133 @@ def get_historical_data(ticker: str, years: int = 5):
         print(f"Error fetching historical data for {ticker}: {e}")
         return None
 
+@app.get("/company-financials/{ticker}")
+async def get_company_financials(ticker: str):
+    """
+    Fetch comprehensive financial data for a company using yfinance
+    """
+    try:
+        stock = yf.Ticker(ticker)
+        info = stock.info
+        
+        # Helper to safely get value from nested dict or large int/float
+        def safe_get(key, default="N/A"):
+            val = info.get(key, default)
+            return val
+
+        # 1. Valuation Measures
+        valuation = {
+            "Market Cap": safe_get("marketCap", 0),
+            "Enterprise Value": safe_get("enterpriseValue", 0),
+            "Trailing P/E": safe_get("trailingPE", 0),
+            "Forward P/E": safe_get("forwardPE", 0),
+            "PEG Ratio": safe_get("pegRatio", 0),
+            "Price/Sales": safe_get("priceToSalesTrailing12Months", 0),
+            "Price/Book": safe_get("priceToBook", 0),
+            "EV/Revenue": safe_get("enterpriseToRevenue", 0),
+            "EV/EBITDA": safe_get("enterpriseToEbitda", 0),
+        }
+
+        # 2. Financial Highlights
+        highlights = {
+            "Profit Margin": safe_get("profitMargins", 0),
+            "Operating Margin": safe_get("operatingMargins", 0),
+            "Return on Assets": safe_get("returnOnAssets", 0),
+            "Return on Equity": safe_get("returnOnEquity", 0),
+            "Revenue (ttm)": safe_get("totalRevenue", 0),
+            "Revenue Per Share": safe_get("revenuePerShare", 0),
+            "Gross Profit": safe_get("grossProfits", 0), # grossProfits might be in financials df, key in info is 'grossMargins' usually or 'grossProfits'
+            "EBITDA": safe_get("ebitda", 0),
+            "Net Income (ttm)": safe_get("netIncomeToCommon", 0),
+            "Diluted EPS": safe_get("trailingEps", 0),
+        }
+
+        # 3. Balance Sheet items
+        balance_sheet = {
+            "Total Cash": safe_get("totalCash", 0),
+            "Total Debt": safe_get("totalDebt", 0),
+            "Current Ratio": safe_get("currentRatio", 0),
+            "Book Value Per Share": safe_get("bookValue", 0),
+        }
+
+        # 4. Cash Flow
+        cash_flow = {
+            "Operating Cash Flow": safe_get("operatingCashflow", 0),
+            "Levered Free Cash Flow": safe_get("freeCashflow", 0),
+        }
+
+        return {
+            "sections": [
+                {"title": "Valuation Measures", "data": valuation},
+                {"title": "Financial Highlights", "data": highlights},
+                {"title": "Balance Sheet", "data": balance_sheet},
+                {"title": "Cash Flow", "data": cash_flow}
+            ]
+        }
+    except Exception as e:
+        print(f"Error fetching financials for {ticker}: {e}")
+        return {"error": str(e)}
+
+@app.get("/market-indices")
+async def get_market_indices():
+    """
+    Fetch live market indices
+    """
+    indices = {
+        "NIFTY 50": "^NSEI",
+        "SENSEX": "^BSESN",
+        "BANKNIFTY": "^NSEBANK",
+        "NASDAQ": "^IXIC",
+        "GOLD": "GC=F"
+    }
+    
+    results = []
+    
+    for name, ticker in indices.items():
+        try:
+            # Using Ticker().fast_info is faster but might be limited. Info is slower but detailed.
+            # We need current price and change. 
+            # Let's try to download last 2 days history to calculate change manually if info fails, or just use info.
+            # Using history(period='2d') is usually reliable for change calculation.
+            stock = yf.Ticker(ticker)
+            hist = stock.history(period="5d") # 5d to be safe over weekends
+            
+            if hist.empty:
+                results.append({
+                    "name": name,
+                    "price": "N/A",
+                    "change": "0.00",
+                    "change_pct": "0.00",
+                    "color": "text-gray-400"
+                })
+                continue
+
+            current_row = hist.iloc[-1]
+            prev_row = hist.iloc[-2] if len(hist) > 1 else current_row
+            
+            price = current_row['Close']
+            prev_close = prev_row['Close']
+            
+            change = price - prev_close
+            change_pct = (change / prev_close) * 100
+            
+            color = "text-green-400" if change >= 0 else "text-red-400"
+            sign = "+" if change >= 0 else ""
+            
+            results.append({
+                "name": name,
+                "price": f"{price:,.2f}",
+                "change": f"{sign}{change:,.2f}",
+                "change_pct": f"{sign}{change_pct:.2f}%",
+                "color": color,
+                "icon": "▲" if change >= 0 else "▼"
+            })
+        except Exception as e:
+            print(f"Error fetching index {name}: {e}")
+            results.append({"name": name, "price": "Error", "change": "0", "change_pct": "0%", "color": "text-gray-400"})
+            
+    return results
+
 
 # Request/Response Models
 class CompanyQuery(BaseModel):

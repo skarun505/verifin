@@ -1,16 +1,45 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 
 export default function HomeTab() {
+    const [indices, setIndices] = useState<any[]>([
+        { name: "NIFTY 50", price: "Loading...", change: "", change_pct: "", color: "text-gray-400" },
+        { name: "SENSEX", price: "Loading...", change: "", change_pct: "", color: "text-gray-400" },
+        { name: "NASDAQ", price: "Loading...", change: "", change_pct: "", color: "text-gray-400" },
+        { name: "GOLD", price: "Loading...", change: "", change_pct: "", color: "text-gray-400" }
+    ]);
+
+    useEffect(() => {
+        const fetchData = async () => {
+            try {
+                const res = await fetch('http://localhost:8000/market-indices');
+                const data = await res.json();
+                if (Array.isArray(data) && data.length > 0) {
+                    setIndices(data);
+                }
+            } catch (e) {
+                console.error("Market data fetch failed", e);
+            }
+        };
+
+        fetchData();
+        const interval = setInterval(fetchData, 60000); // Update every minute
+        return () => clearInterval(interval);
+    }, []);
+
     return (
         <div className="space-y-16 pb-12 w-full">
             {/* Market Ticker */}
             <div className="overflow-hidden bg-black/20 backdrop-blur-sm border-y border-white/5 py-2 -mx-4 md:-mx-8">
                 <div className="flex justify-between items-center text-xs md:text-sm font-mono text-gray-400 whitespace-nowrap overflow-x-auto scrollbar-hide px-4 gap-8">
-                    <span className="flex items-center gap-2"><span className="text-green-400">▲</span> NIFTY 50 <span className="text-white">22,145.60</span> (+0.85%)</span>
-                    <span className="flex items-center gap-2"><span className="text-green-400">▲</span> SENSEX <span className="text-white">73,158.20</span> (+0.72%)</span>
-                    <span className="flex items-center gap-2"><span className="text-red-400">▼</span> BANKNIFTY <span className="text-white">46,580.00</span> (-0.30%)</span>
-                    <span className="flex items-center gap-2"><span className="text-green-400">▲</span> NASDAQ <span className="text-white">16,274.90</span> (+1.14%)</span>
-                    <span className="flex items-center gap-2"><span className="text-yellow-400">●</span> GOLD <span className="text-white">65,400.00</span> (+0.10%)</span>
+                    {indices.map((idx, i) => (
+                        <span key={i} className="flex items-center gap-2 animate-pulse">
+                            <span className={idx.change.startsWith('+') ? "text-green-400" : "text-red-400"}>
+                                {idx.change.startsWith('+') ? "▲" : "▼"}
+                            </span>
+                            {idx.name} <span className="text-white font-bold">{idx.price}</span>
+                            <span className={`${idx.color} text-xs`}>({idx.change_pct})</span>
+                        </span>
+                    ))}
                 </div>
             </div>
 
