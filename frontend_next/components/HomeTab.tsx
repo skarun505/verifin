@@ -5,16 +5,6 @@ import React from 'react'
 export default function HomeTab() {
     return (
         <div className="space-y-16 pb-12 w-full max-w-6xl mx-auto px-4">
-            {/* Hero Section - Brand & Tagline */}
-            <div className="text-center py-24 relative overflow-hidden rounded-3xl glass border border-white/10">
-                <div className="absolute inset-0 bg-gradient-to-r from-purple-500/10 to-blue-500/10 blur-3xl" />
-                <div className="relative z-10 px-4">
-                    <h1 className="text-7xl font-bold text-transparent bg-clip-text gradient-primary">
-                        VeriFin
-                    </h1>
-                </div>
-            </div>
-
             {/* Problem & Solution Section */}
             <div className="glass rounded-3xl p-12 border border-white/10">
                 <div className="grid md:grid-cols-3 gap-12">
