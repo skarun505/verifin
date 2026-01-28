@@ -130,31 +130,10 @@ def get_real_stock_data(ticker: str):
             except:
                 pass
 
-        # If we still have no price, return Mock or None (logic below will handle)
+        # If we still have no price, return None (real data unavailable)
         if 'current_price' not in data:
-             print(f"❌ Critical Price Data Missing for {ticker}. Using MOCK data.")
-             is_indian = ".NS" in ticker or ".BO" in ticker
-             base_price = 2500.0 if not is_indian else 1000.0 
-             mock_price = base_price + (len(ticker) * 10)
-             
-             return {
-                "current_price": mock_price,
-                "previous_close": mock_price - 15.0,
-                "price_change": 15.0,
-                "price_change_pct": 1.5,
-                "currency": "₹" if is_indian else "$",
-                "market_cap": 10000000000,
-                "volume": 1000000,
-                "pe_ratio": 20.5,
-                "dividend_yield": 0.01,
-                "52_week_high": mock_price * 1.2,
-                "52_week_low": mock_price * 0.8,
-                "sector": "N/A",  
-                "industry": "N/A",
-                "description": f"Real-time data currently unavailable for {ticker}.",
-                "website": "",
-                "employees": 0
-             }
+             print(f"❌ Critical Price Data Missing for {ticker}. Market might be closed or ticker invalid.")
+             return None
 
         # 2. Fetch METADATA using .info (Slow, fragile)
         # We do this separately so if it fails, we still return the Price data from step 1
@@ -306,7 +285,7 @@ async def get_market_indices():
         "SENSEX": "^BSESN",
         "BANKNIFTY": "^NSEBANK",
         "NASDAQ": "^IXIC",
-        "GOLD": "GC=F"
+        "GOLD (8g)": "GOLDBEES.NS"  # Gold ETF in INR - will multiply by factor for 8g price
     }
     
     results = []
@@ -336,16 +315,35 @@ async def get_market_indices():
             price = current_row['Close']
             prev_close = prev_row['Close']
             
+            # Special handling for GOLD - convert GOLDBEES price to 8g gold price
+            # GOLDBEES tracks gold and we need to convert to 8g price
+            if "GOLD" in name:
+                # Current market data shows:
+                # 8g gold ≈ ₹1,23,214.81
+                # GOLDBEES current price ≈ ₹131 (fluctuates)
+                # Factor = 1,23,214.81 / 131 ≈ 940
+                gold_factor = 940  # This converts GOLDBEES unit price to 8g gold price
+                price = price * gold_factor
+                prev_close = prev_close * gold_factor
+            
             change = price - prev_close
             change_pct = (change / prev_close) * 100
             
             color = "text-green-400" if change >= 0 else "text-red-400"
             sign = "+" if change >= 0 else ""
             
+            # Format price based on ticker
+            if "GOLD" in name:
+                price_str = f"₹{price:,.2f}"  # Show in INR with ₹ symbol
+                change_str = f"{sign}₹{change:,.2f}"
+            else:
+                price_str = f"{price:,.2f}"
+                change_str = f"{sign}{change:,.2f}"
+            
             results.append({
                 "name": name,
-                "price": f"{price:,.2f}",
-                "change": f"{sign}{change:,.2f}",
+                "price": price_str,
+                "change": change_str,
                 "change_pct": f"{sign}{change_pct:.2f}%",
                 "color": color,
                 "icon": "▲" if change >= 0 else "▼"
@@ -403,43 +401,92 @@ async def resolve_company(query: CompanyQuery):
     try:
         company_name = query.query.strip()
         
-        # Comprehensive company database - 50+ companies
+        # Comprehensive company database - 100+ companies (Indian, Global, Nifty 50, Sensex)
         companies = {
-            # US Tech Giants
+            # ==================== GLOBAL TECH GIANTS ====================
             "AAPL": {"name": "Apple Inc.", "type": "public", "sector": "Technology", "logo": "https://logo.clearbit.com/apple.com"},
             "MSFT": {"name": "Microsoft Corporation", "type": "public", "sector": "Technology", "logo": "https://logo.clearbit.com/microsoft.com"},
-            "GOOGL": {"name": "Alphabet Inc.", "type": "public", "sector": "Technology", "logo": "https://logo.clearbit.com/google.com"},
+            "GOOGL": {"name": "Alphabet Inc. (Google)", "type": "public", "sector": "Technology", "logo": "https://logo.clearbit.com/google.com"},
+            "GOOG": {"name": "Google (Alphabet Class C)", "type": "public", "sector": "Technology", "logo": "https://logo.clearbit.com/google.com"},
             "AMZN": {"name": "Amazon.com Inc.", "type": "public", "sector": "E-commerce", "logo": "https://logo.clearbit.com/amazon.com"},
             "TSLA": {"name": "Tesla Inc.", "type": "public", "sector": "Automotive", "logo": "https://logo.clearbit.com/tesla.com"},
-            "META": {"name": "Meta Platforms Inc.", "type": "public", "sector": "Technology", "logo": "https://logo.clearbit.com/meta.com"},
-            "NVDA": {"name": "NVIDIA Corporation", "type": "public", "sector": "Technology", "logo": "https://logo.clearbit.com/nvidia.com"},
+            "META": {"name": "Meta Platforms Inc. (Facebook)", "type": "public", "sector": "Technology", "logo": "https://logo.clearbit.com/meta.com"},
+            "NVDA": {"name": "NVIDIA Corporation", "type": "public", "sector": "Technology/AI", "logo": "https://logo.clearbit.com/nvidia.com"},
             "NFLX": {"name": "Netflix Inc.", "type": "public", "sector": "Entertainment", "logo": "https://logo.clearbit.com/netflix.com"},
+            "IBM": {"name": "International Business Machines", "type": "public", "sector": "Technology", "logo": "https://logo.clearbit.com/ibm.com"},
+            "ORCL": {"name": "Oracle Corporation", "type": "public", "sector": "Technology", "logo": "https://logo.clearbit.com/oracle.com"},
+            "SSNLF": {"name": "Samsung Electronics", "type": "public", "sector": "Technology", "logo": "https://logo.clearbit.com/samsung.com"},
+            "005930.KS": {"name": "Samsung Electronics Co Ltd", "type": "public", "sector": "Technology", "logo": "https://logo.clearbit.com/samsung.com"},
             
-            # Indian Conglomerates
-            "RELIANCE.NS": {"name": "Reliance Industries Limited", "type": "public", "sector": "Conglomerate", "logo": "https://logo.clearbit.com/ril.com"},
-            "TCS.NS": {"name": "TCS (Tata Consultancy Services)", "type": "public", "sector": "IT Services", "logo": "https://logo.clearbit.com/tcs.com"},
+            # ==================== INDIAN IT SERVICES (MAJOR PLAYERS) ====================
+            "TCS.NS": {"name": "Tata Consultancy Services (TCS)", "type": "public", "sector": "IT Services", "logo": "https://logo.clearbit.com/tcs.com"},
             "INFY.NS": {"name": "Infosys Limited", "type": "public", "sector": "IT Services", "logo": "https://logo.clearbit.com/infosys.com"},
+            "WIPRO.NS": {"name": "Wipro Limited", "type": "public", "sector": "IT Services", "logo": "https://logo.clearbit.com/wipro.com"},
+            "HCLTECH.NS": {"name": "HCL Technologies", "type": "public", "sector": "IT Services", "logo": "https://logo.clearbit.com/hcltech.com"},
+            "COFORGE.NS": {"name": "Coforge Limited", "type": "public", "sector": "IT Services", "logo": "https://logo.clearbit.com/coforge.com"},
+            "TECHM.NS": {"name": "Tech Mahindra Limited", "type": "public", "sector": "IT Services", "logo": "https://logo.clearbit.com/techmahindra.com"},
+            "LTIM.NS": {"name": "LTIMindtree Limited", "type": "public", "sector": "IT Services", "logo": "https://logo.clearbit.com/ltimindtree.com"},
+            "CTSH": {"name": "Cognizant Technology Solutions", "type": "public", "sector": "IT Services", "logo": "https://logo.clearbit.com/cognizant.com"},
+            "ACN": {"name": "Accenture plc", "type": "public", "sector": "IT Services", "logo": "https://logo.clearbit.com/accenture.com"},
+            
+            # ==================== INDIAN BANKS ====================
             "HDFCBANK.NS": {"name": "HDFC Bank Limited", "type": "public", "sector": "Banking", "logo": "https://logo.clearbit.com/hdfcbank.com"},
             "ICICIBANK.NS": {"name": "ICICI Bank Limited", "type": "public", "sector": "Banking", "logo": "https://logo.clearbit.com/icicibank.com"},
-            "ITC.NS": {"name": "ITC Limited", "type": "public", "sector": "FMCG", "logo": "https://logo.clearbit.com/itcportal.com"},
+            "SBIN.NS": {"name": "State Bank of India (SBI)", "type": "public", "sector": "Banking", "logo": "https://logo.clearbit.com/sbi.co.in"},
+            "KOTAKBANK.NS": {"name": "Kotak Mahindra Bank", "type": "public", "sector": "Banking", "logo": "https://logo.clearbit.com/kotak.com"},
+            "AXISBANK.NS": {"name": "Axis Bank Limited", "type": "public", "sector": "Banking", "logo": "https://logo.clearbit.com/axisbank.com"},
+            "INDUSINDBK.NS": {"name": "IndusInd Bank Limited", "type": "public", "sector": "Banking", "logo": "https://logo.clearbit.com/indusind.com"},
+            "BAJFINANCE.NS": {"name": "Bajaj Finance Limited", "type": "public", "sector": "NBFC", "logo": "https://logo.clearbit.com/bajajfinserv.in"},
             
-            # Indian Telecom & Digital
+            # ==================== INDIAN TELECOM ====================
             "BHARTIARTL.NS": {"name": "Bharti Airtel Limited", "type": "public", "sector": "Telecom", "logo": "https://logo.clearbit.com/airtel.in"},
-            "JIO": {"name": "Reliance Jio Infocomm", "type": "public", "sector": "Telecom", "logo": "https://logo.clearbit.com/jio.com"},
             "IDEA.NS": {"name": "Vodafone Idea Limited (Vi)", "type": "public", "sector": "Telecom", "logo": "https://logo.clearbit.com/myvi.in"},
+            "RELIANCE.NS": {"name": "Reliance Industries (JIO Parent)", "type": "public", "sector": "Conglomerate/Telecom", "logo": "https://logo.clearbit.com/ril.com"},
             
-            # Indian Auto & Manufacturing
+            # ==================== INDIAN TYRE & MANUFACTURING ====================
             "MRF.NS": {"name": "MRF Limited", "type": "public", "sector": "Tyre Manufacturing", "logo": "https://logo.clearbit.com/mrftyres.com"},
+            "CEATLTD.NS": {"name": "CEAT Limited", "type": "public", "sector": "Tyre Manufacturing", "logo": "https://logo.clearbit.com/ceat.com"},
+            "APOLLOTYRE.NS": {"name": "Apollo Tyres Limited", "type": "public", "sector": "Tyre Manufacturing", "logo": "https://logo.clearbit.com/apollotyres.com"},
+            
+            # ==================== NIFTY 50 STOCKS (ADDITIONAL) ====================
+            "ITC.NS": {"name": "ITC Limited", "type": "public", "sector": "FMCG/Tobacco", "logo": "https://logo.clearbit.com/itcportal.com"},
             "TATAMOTORS.NS": {"name": "Tata Motors Limited", "type": "public", "sector": "Automotive", "logo": "https://logo.clearbit.com/tatamotors.com"},
             "MARUTI.NS": {"name": "Maruti Suzuki India Limited", "type": "public", "sector": "Automotive", "logo": "https://logo.clearbit.com/marutisuzuki.com"},
             "HEROMOTOCO.NS": {"name": "Hero MotoCorp Limited", "type": "public", "sector": "Automotive", "logo": "https://logo.clearbit.com/heromotocorp.com"},
+            "SUNPHARMA.NS": {"name": "Sun Pharmaceutical Industries", "type": "public", "sector": "Pharmaceuticals", "logo": "https://logo.clearbit.com/sunpharma.com"},
+            "DRREDDY.NS": {"name": "Dr. Reddy's Laboratories", "type": "public", "sector": "Pharmaceuticals", "logo": "https://logo.clearbit.com/drreddys.com"},
+            "CIPLA.NS": {"name": "Cipla Limited", "type": "public", "sector": "Pharmaceuticals", "logo": "https://logo.clearbit.com/cipla.com"},
+            "DIVISLAB.NS": {"name": "Divi's Laboratories", "type": "public", "sector": "Pharmaceuticals", "logo": "https://logo.clearbit.com/divislabs.com"},
+            "NESTLEIND.NS": {"name": "Nestle India Limited", "type": "public", "sector": "FMCG", "logo": "https://logo.clearbit.com/nestle.in"},
+            "ASIANPAINT.NS": {"name": "Asian Paints Limited", "type": "public", "sector": "Paints", "logo": "https://logo.clearbit.com/asianpaints.com"},
+            "LT.NS": {"name": "Larsen & Toubro Limited", "type": "public", "sector": "Engineering", "logo": "https://logo.clearbit.com/larsentoubro.com"},
+            "ULTRACEMCO.NS": {"name": "UltraTech Cement Limited", "type": "public", "sector": "Cement", "logo": "https://logo.clearbit.com/ultratechcement.com"},
+            "TITAN.NS": {"name": "Titan Company Limited", "type": "public", "sector": "Consumer Goods/Watches", "logo": "https://logo.clearbit.com/titan.co.in"},
+            "POWERGRID.NS": {"name": "Power Grid Corporation", "type": "public", "sector": "Utilities", "logo": "https://logo.clearbit.com/powergridindia.com"},
+            "NTPC.NS": {"name": "NTPC Limited", "type": "public", "sector": "Power", "logo": "https://logo.clearbit.com/ntpc.co.in"},
+            "ONGC.NS": {"name": "Oil and Natural Gas Corporation", "type": "public", "sector": "Oil & Gas", "logo": "https://logo.clearbit.com/ongcindia.com"},
+            "BPCL.NS": {"name": "Bharat Petroleum Corporation", "type": "public", "sector": "Oil & Gas", "logo": "https://logo.clearbit.com/bharatpetroleum.in"},
+            "HINDALCO.NS": {"name": "Hindalco Industries", "type": "public", "sector": "Metals", "logo": "https://logo.clearbit.com/hindalco.com"},
+            "TATASTEEL.NS": {"name": "Tata Steel Limited", "type": "public", "sector": "Metals", "logo": "https://logo.clearbit.com/tatasteel.com"},
+            "JSWSTEEL.NS": {"name": "JSW Steel Limited", "type": "public", "sector": "Metals", "logo": "https://logo.clearbit.com/jsw.in"},
+            "COALINDIA.NS": {"name": "Coal India Limited", "type": "public", "sector": "Mining", "logo": "https://logo.clearbit.com/coalindia.in"},
+            "ADANIENT.NS": {"name": "Adani Enterprises Limited", "type": "public", "sector": "Conglomerate", "logo": "https://logo.clearbit.com/adani.com"},
+            "ADANIPORTS.NS": {"name": "Adani Ports & SEZ", "type": "public", "sector": "Infrastructure", "logo": "https://logo.clearbit.com/adani.com"},
+            "GRASIM.NS": {"name": "Grasim Industries", "type": "public", "sector": "Cement", "logo": "https://logo.clearbit.com/grasim.com"},
+            "BRITANNIA.NS": {"name": "Britannia Industries", "type": "public", "sector": "FMCG", "logo": "https://logo.clearbit.com/britannia.co.in"},
+            "HINDUNILVR.NS": {"name": "Hindustan Unilever Limited", "type": "public", "sector": "FMCG", "logo": "https://logo.clearbit.com/hul.co.in"},
+            "BAJAJFINSV.NS": {"name": "Bajaj Finserv Limited", "type": "public", "sector": "Financial Services", "logo": "https://logo.clearbit.com/bajajfinserv.in"},
+            "EICHERMOT.NS": {"name": "Eicher Motors (Royal Enfield)", "type": "public", "sector": "Automotive", "logo": "https://logo.clearbit.com/eichermotors.com"},
+            "M&M.NS": {"name": "Mahindra & Mahindra", "type": "public", "sector": "Automotive", "logo": "https://logo.clearbit.com/mahindra.com"},
             
-            # Indian E-commerce & Startups
+            # ==================== INDIAN E-COMMERCE & NEW AGE ====================
             "ZOMATO.NS": {"name": "Zomato Limited", "type": "public", "sector": "Food Tech", "logo": "https://logo.clearbit.com/zomato.com"},
             "PAYTM.NS": {"name": "Paytm (One97 Communications)", "type": "public", "sector": "Fintech", "logo": "https://logo.clearbit.com/paytm.com"},
             "NYKAA.NS": {"name": "Nykaa (FSN E-Commerce)", "type": "public", "sector": "E-commerce", "logo": "https://logo.clearbit.com/nykaa.com"},
+            "POLICYBZR.NS": {"name": "PB Fintech (Policybazaar)", "type": "public", "sector": "Insurtech", "logo": "https://logo.clearbit.com/policybazaar.com"},
+            "DMART.NS": {"name": "Avenue Supermarts (DMart)", "type": "public", "sector": "Retail", "logo": "https://logo.clearbit.com/dmart.in"},
             
-            # Private Indian Startups
+            # ==================== PRIVATE INDIAN STARTUPS ====================
             "SWIGGY": {"name": "Swiggy", "type": "private", "sector": "Food Delivery", "logo": "https://logo.clearbit.com/swiggy.com"},
             "ZEPTO": {"name": "Zepto", "type": "private", "sector": "Quick Commerce", "logo": "https://logo.clearbit.com/zeptonow.com"},
             "FLIPKART": {"name": "Flipkart", "type": "private", "sector": "E-commerce", "logo": "https://logo.clearbit.com/flipkart.com"},
@@ -447,52 +494,24 @@ async def resolve_company(query: CompanyQuery):
             "OLA": {"name": "Ola Cabs", "type": "private", "sector": "Ride Sharing", "logo": "https://logo.clearbit.com/olacabs.com"},
             "CRED": {"name": "CRED", "type": "private", "sector": "Fintech", "logo": "https://logo.clearbit.com/cred.club"},
             "RAZORPAY": {"name": "Razorpay", "type": "private", "sector": "Payments", "logo": "https://logo.clearbit.com/razorpay.com"},
+            "ZOHO": {"name": "Zoho Corporation", "type": "private", "sector": "Software", "logo": "https://logo.clearbit.com/zoho.com"},
             
-            # Indian Pharma & Healthcare
-            "SUNPHARMA.NS": {"name": "Sun Pharmaceutical Industries", "type": "public", "sector": "Pharmaceuticals", "logo": "https://logo.clearbit.com/sunpharma.com"},
-            "DRREDDY.NS": {"name": "Dr. Reddy's Laboratories", "type": "public", "sector": "Pharmaceuticals", "logo": "https://logo.clearbit.com/drreddys.com"},
-            
-            # Indian Consumer & Retail
-            "DMART.NS": {"name": "Avenue Supermarts (DMart)", "type": "public", "sector": "Retail", "logo": "https://logo.clearbit.com/dmart.in"},
-            "TITAN.NS": {"name": "Titan Company Limited", "type": "public", "sector": "Consumer Goods", "logo": "https://logo.clearbit.com/titan.co.in"},
-            
-            # US Finance & Banks
+            # ==================== US BANKS & FINANCE ====================
             "JPM": {"name": "JPMorgan Chase & Co.", "type": "public", "sector": "Banking", "logo": "https://logo.clearbit.com/jpmorganchase.com"},
             "BAC": {"name": "Bank of America Corporation", "type": "public", "sector": "Banking", "logo": "https://logo.clearbit.com/bankofamerica.com"},
+            "WFC": {"name": "Wells Fargo & Company", "type": "public", "sector": "Banking", "logo": "https://logo.clearbit.com/wellsfargo.com"},
+            "C": {"name": "Citigroup Inc.", "type": "public", "sector": "Banking", "logo": "https://logo.clearbit.com/citigroup.com"},
             
-            # Global Brands
+            # ==================== GLOBAL BRANDS ====================
             "KO": {"name": "The Coca-Cola Company", "type": "public", "sector": "Beverages", "logo": "https://logo.clearbit.com/coca-cola.com"},
             "PEP": {"name": "PepsiCo Inc.", "type": "public", "sector": "Food & Beverages", "logo": "https://logo.clearbit.com/pepsico.com"},
             "NKE": {"name": "Nike Inc.", "type": "public", "sector": "Apparel", "logo": "https://logo.clearbit.com/nike.com"},
             "MCD": {"name": "McDonald's Corporation", "type": "public", "sector": "Food Service", "logo": "https://logo.clearbit.com/mcdonalds.com"},
-            
-            # Additional Indian Companies
-            "WIPRO.NS": {"name": "Wipro Limited", "type": "public", "sector": "IT Services", "logo": "https://logo.clearbit.com/wipro.com"},
-            "HCLTECH.NS": {"name": "HCL Technologies", "type": "public", "sector": "IT Services", "logo": "https://logo.clearbit.com/hcltech.com"},
-            "BAJFINANCE.NS": {"name": "Bajaj Finance Limited", "type": "public", "sector": "NBFC", "logo": "https://logo.clearbit.com/bajajfinserv.in"},
-            "ADANIENT.NS": {"name": "Adani Enterprises Limited", "type": "public", "sector": "Conglomerate", "logo": "https://logo.clearbit.com/adani.com"},
-            "NESTLEIND.NS": {"name": "Nestle India Limited", "type": "public", "sector": "FMCG", "logo": "https://logo.clearbit.com/nestle.in"},
-            "ASIANPAINT.NS": {"name": "Asian Paints Limited", "type": "public", "sector": "Paints", "logo": "https://logo.clearbit.com/asianpaints.com"},
-            "LT.NS": {"name": "Larsen & Toubro Limited", "type": "public", "sector": "Engineering", "logo": "https://logo.clearbit.com/larsentoubro.com"},
-            "ULTRACEMCO.NS": {"name": "UltraTech Cement Limited", "type": "public", "sector": "Cement", "logo": "https://logo.clearbit.com/ultratechcement.com"},
-            
-            # Private Companies (Zoho etc)
-            # Global Tech
-            "CTSH": {"name": "Cognizant Technology Solutions", "type": "public", "sector": "IT Services", "logo": "https://logo.clearbit.com/cognizant.com"},
-            "ACN": {"name": "Accenture plc", "type": "public", "sector": "IT Services", "logo": "https://logo.clearbit.com/accenture.com"},
-            "IBM": {"name": "International Business Machines", "type": "public", "sector": "Technology", "logo": "https://logo.clearbit.com/ibm.com"},
-            "ORCL": {"name": "Oracle Corporation", "type": "public", "sector": "Technology", "logo": "https://logo.clearbit.com/oracle.com"},
-            
-            # Private Companies (Restored)
-            "ZOHO": {"name": "Zoho Corporation", "type": "private", "sector": "Software", "logo": "https://logo.clearbit.com/zoho.com"},
-            "BYJU": {"name": "BYJU'S", "type": "private", "sector": "EdTech", "logo": "https://logo.clearbit.com/byjus.com"},
-            "ZEPTO": {"name": "Zepto", "type": "private", "sector": "Quick Commerce", "logo": "https://logo.clearbit.com/zeptonow.com"},
-            "SWIGGY": {"name": "Swiggy", "type": "private", "sector": "Food Tech", "logo": "https://logo.clearbit.com/swiggy.com"},
-            "FLIPKART": {"name": "Flipkart", "type": "private", "sector": "E-commerce", "logo": "https://logo.clearbit.com/flipkart.com"},
-            
-            # Indian IT (Expanded)
-            "LTIM.NS": {"name": "LTIMindtree Limited", "type": "public", "sector": "IT Services", "logo": "https://logo.clearbit.com/ltimindtree.com"},
-            "TECHM.NS": {"name": "Tech Mahindra Limited", "type": "public", "sector": "IT Services", "logo": "https://logo.clearbit.com/techmahindra.com"},
+            "SBUX": {"name": "Starbucks Corporation", "type": "public", "sector": "Food Service", "logo": "https://logo.clearbit.com/starbucks.com"},
+            "WMT": {"name": "Walmart Inc.", "type": "public", "sector": "Retail", "logo": "https://logo.clearbit.com/walmart.com"},
+            "DIS": {"name": "The Walt Disney Company", "type": "public", "sector": "Entertainment", "logo": "https://logo.clearbit.com/disney.com"},
+            "V": {"name": "Visa Inc.", "type": "public", "sector": "Payments", "logo": "https://logo.clearbit.com/visa.com"},
+            "MA": {"name": "Mastercard Inc.", "type": "public", "sector": "Payments", "logo": "https://logo.clearbit.com/mastercard.com"},
         }
         
         # Merge with existing companies dict (simulated by just appending these entries if I was editing dict directly, but here I'm replacing the end of the dict or just relying on existing + new)
