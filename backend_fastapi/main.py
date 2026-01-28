@@ -555,37 +555,16 @@ async def resolve_company(query: CompanyQuery):
                 "confidence": best_score
             }
         
-        # Fallback: Try checking if query is a valid ticker directly using yfinance
-        # This handles tickers not in our DB (e.g. "AMD", "INTC")
-        if len(company_name.split()) == 1 and len(company_name) <= 10:
-             try:
-                 print(f"🕵️ Attempting direct ticker lookup for: {company_name}")
-                 # Use existing helper in thread pool to check validity
-                 loop = asyncio.get_running_loop()
-                 # Try assuming it is a ticker (uppercase)
-                 ticker_check = company_name.upper()
-                 
-                 # Check if we can get data
-                 data = await loop.run_in_executor(None, get_real_stock_data, ticker_check)
-                 
-                 if data:
-                     return {
-                         "success": True,
-                         "ticker": ticker_check,
-                         "name": data.get("name", ticker_check), # get_real_stock_data doesn't return name usually, but we can default to ticker
-                         "type": "public",
-                         "sector": data.get("sector", "N/A"),
-                         "logo": "",
-                         "confidence": 90
-                     }
-             except Exception as e:
-                 print(f"Fallback check failed: {e}")
-                 pass
-
+        # No match found - return clear error message
         return {
             "success": False,
-            "message": f"No match found for '{company_name}'",
-            "suggestions": ["Apple", "Microsoft", "TCS", "Reliance"]
+            "message": f"Company '{company_name}' not found in our database",
+            "error": "COMPANY_NOT_FOUND",
+            "suggestions": [
+                "Try Indian companies: TCS, Infosys, Wipro, HCL, Reliance, Airtel, SBI, HDFC, ICICI",
+                "Try Global companies: Apple, Microsoft, Google, Amazon, Tesla, Nvidia, Meta",
+                "View complete list in COMPANIES_TRACKED.md"
+            ]
         }
             
     except Exception as e:
