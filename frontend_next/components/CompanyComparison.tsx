@@ -56,6 +56,11 @@ export default function CompanyComparison() {
             const pageHeight = pdf.internal.pageSize.getHeight()
             let yPosition = 20
 
+            // Helper function to clean text for PDF (remove Unicode symbols that don't render)
+            const cleanTextForPDF = (text: string) => {
+                return String(text).replace(/₹/g, 'Rs.').replace(/'/g, '')
+            }
+
             // ========== HEADER ==========
             pdf.setFillColor(139, 92, 246) // Purple
             pdf.rect(0, 0, pageWidth, 40, 'F')
@@ -82,7 +87,7 @@ export default function CompanyComparison() {
             pdf.text(`Ticker: ${data.company1.ticker}`, 20, yPosition + 18)
             pdf.setFontSize(14)
             pdf.setFont('helvetica', 'bold')
-            pdf.text(String(data.company1.price), 20, yPosition + 28)
+            pdf.text(cleanTextForPDF(data.company1.price), 20, yPosition + 28)
 
             // Company 2
             pdf.setFillColor(16, 185, 129) // Green
@@ -96,7 +101,7 @@ export default function CompanyComparison() {
             pdf.text(`Ticker: ${data.company2.ticker}`, 115, yPosition + 18)
             pdf.setFontSize(14)
             pdf.setFont('helvetica', 'bold')
-            pdf.text(String(data.company2.price), 115, yPosition + 28)
+            pdf.text(cleanTextForPDF(data.company2.price), 115, yPosition + 28)
 
             yPosition += 45
 
@@ -138,13 +143,13 @@ export default function CompanyComparison() {
                 }
 
                 pdf.setTextColor(100, 100, 100)
-                pdf.text(String(val1), 25, yPosition + 6)
+                pdf.text(cleanTextForPDF(String(val1)), 25, yPosition + 6)
                 pdf.setTextColor(0, 0, 0)
                 pdf.setFont('helvetica', 'bold')
-                pdf.text(String(metric), pageWidth / 2 - 15, yPosition + 6, { align: 'center' })
+                pdf.text(cleanTextForPDF(String(metric)), pageWidth / 2 - 15, yPosition + 6, { align: 'center' })
                 pdf.setFont('helvetica', 'normal')
                 pdf.setTextColor(100, 100, 100)
-                pdf.text(String(val2), pageWidth - 35, yPosition + 6, { align: 'right' })
+                pdf.text(cleanTextForPDF(String(val2)), pageWidth - 35, yPosition + 6, { align: 'right' })
 
                 yPosition += 8
             })
@@ -166,6 +171,73 @@ export default function CompanyComparison() {
             yPosition += 6
             pdf.text(`Type: ${data.company1.type} vs ${data.company2.type}`, 15, yPosition)
             yPosition += 15
+
+            // ========== CHARTS ==========
+            // Add new page for charts
+            pdf.addPage()
+            yPosition = 20
+
+            pdf.setFontSize(16)
+            pdf.setFont('helvetica', 'bold')
+            pdf.text('Financial Charts', 15, yPosition)
+            yPosition += 15
+
+            // Render Price Comparison Chart
+            const priceChartElements = document.querySelectorAll('.recharts-wrapper')
+            if (priceChartElements.length > 0) {
+                try {
+                    const priceChart = priceChartElements[0].parentElement
+                    if (priceChart) {
+                        const canvas = await html2canvas(priceChart as HTMLElement, {
+                            backgroundColor: '#ffffff',
+                            scale: 2
+                        } as any)
+                        const imgData = canvas.toDataURL('image/png')
+                        pdf.addImage(imgData, 'PNG', 15, yPosition, pageWidth - 30, 80)
+                        yPosition += 90
+                    }
+                } catch (e) {
+                    console.error('Chart rendering failed:', e)
+                }
+            }
+
+            // Render Financial Charts (Revenue & Profit) if space available
+            if (priceChartElements.length > 1 && yPosition < pageHeight - 90) {
+                try {
+                    const finChart = priceChartElements[1].parentElement
+                    if (finChart) {
+                        const canvas = await html2canvas(finChart as HTMLElement, {
+                            backgroundColor: '#ffffff',
+                            scale: 2
+                        } as any)
+                        const imgData = canvas.toDataURL('image/png')
+                        pdf.addImage(imgData, 'PNG', 15, yPosition, (pageWidth - 30) / 2, 70)
+                    }
+                } catch (e) {
+                    console.error('Chart rendering failed:', e)
+                }
+            }
+
+            // If there are more charts, add them on new pages if needed
+            if (priceChartElements.length > 2) {
+                try {
+                    const profitChart = priceChartElements[2].parentElement
+                    if (profitChart) {
+                        const canvas = await html2canvas(profitChart as HTMLElement, {
+                            backgroundColor: '#ffffff',
+                            scale: 2
+                        } as any)
+                        const imgData = canvas.toDataURL('image/png')
+                        pdf.addImage(imgData, 'PNG', pageWidth / 2 + 5, yPosition, (pageWidth - 30) / 2, 70)
+                    }
+                } catch (e) {
+                    console.error('Chart rendering failed:', e)
+                }
+            }
+
+            // New page for analysis and disclaimer
+            pdf.addPage()
+            yPosition = 20
 
             // ========== ANALYSIS (if available) ==========
             if (data.analysis) {
