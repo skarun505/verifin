@@ -9,12 +9,9 @@ export default function HomeTab() {
             <div className="text-center py-24 relative overflow-hidden rounded-3xl glass border border-white/10">
                 <div className="absolute inset-0 bg-gradient-to-r from-purple-500/10 to-blue-500/10 blur-3xl" />
                 <div className="relative z-10 px-4">
-                    <h1 className="text-7xl font-bold text-transparent bg-clip-text gradient-primary mb-4">
+                    <h1 className="text-7xl font-bold text-transparent bg-clip-text gradient-primary">
                         VeriFin
                     </h1>
-                    <p className="text-2xl text-gray-300 font-light italic">
-                        Transforming Financial Analysis with Generative AI
-                    </p>
                 </div>
             </div>
 
