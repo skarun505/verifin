@@ -91,49 +91,6 @@ export default function Home() {
                 </div>
             </div>
 
-            {/* Footer */}
-            <footer className="glass border-t border-white/10 mt-auto flex-none">
-                <div className="container mx-auto px-4 py-12">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
-                        {/* Brand */}
-                        <div className="space-y-4">
-                            <div className="flex items-center space-x-2">
-                                <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center font-bold text-white">V</div>
-                                <span className="text-xl font-bold text-white">VeriFin</span>
-                            </div>
-                            <p className="text-gray-400 text-sm leading-relaxed">
-                                Next-generation financial intelligence platform powered by Generative AI.
-                                Delivering clarity in a complex market.
-                            </p>
-                        </div>
-
-                        {/* Quick Links */}
-                        <div>
-                            <h4 className="text-white font-semibold mb-4">Platform</h4>
-                            <ul className="space-y-2 text-sm text-gray-400">
-                                <li><button onClick={() => setActiveTab('search')} className="hover:text-purple-400 transition-colors">Market Search</button></li>
-                                <li><button onClick={() => setActiveTab('compare')} className="hover:text-purple-400 transition-colors">Comparison Tool</button></li>
-                                <li><button onClick={() => setActiveTab('document')} className="hover:text-purple-400 transition-colors">Document AI</button></li>
-                                <li><button onClick={() => setActiveTab('chat')} className="hover:text-purple-400 transition-colors">AI Assistant</button></li>
-                            </ul>
-                        </div>
-
-                        {/* Resources */}
-                        <div>
-                            <h4 className="text-white font-semibold mb-4">Resources</h4>
-                            <ul className="space-y-2 text-sm text-gray-400">
-                                <li><a href="#" className="hover:text-purple-400 transition-colors">Documentation</a></li>
-                                <li><a href="#" className="hover:text-purple-400 transition-colors">API Access</a></li>
-                                <li><a href="#" className="hover:text-purple-400 transition-colors">Market Reports</a></li>
-                                <li><a href="#" className="hover:text-purple-400 transition-colors">Privacy Policy</a></li>
-                            </ul>
-                        </div>
-                    </div>
-                    <div className="border-t border-white/10 pt-8 text-center text-gray-500 text-sm">
-                        <p>© 2026 VeriFin Inc. All rights reserved.</p>
-                    </div>
-                </div>
-            </footer>
         </main>
     )
 }
