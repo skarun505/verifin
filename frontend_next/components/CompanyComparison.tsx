@@ -43,62 +43,206 @@ export default function CompanyComparison() {
 
     const downloadComparisonPDF = async () => {
         if (!data) return
-
         setDownloadingPDF(true)
+
         try {
-            // Find the element to capture
-            const element = document.getElementById('comparison-report')
-            if (!element) return
+            const pdf = new jsPDF({
+                orientation: 'p',
+                unit: 'mm',
+                format: 'a4'
+            })
 
-            // Capture via html2canvas
-            const canvas = await html2canvas(element, {
-                scale: 2, // Higher quality
-                backgroundColor: '#0f172a', // Match background
-                logging: false,
-                useCORS: true
-            } as any)
+            const pageWidth = pdf.internal.pageSize.getWidth()
+            const pageHeight = pdf.internal.pageSize.getHeight()
+            let yPosition = 20
 
-            const imgData = canvas.toDataURL('image/png')
+            // ========== HEADER ==========
+            pdf.setFillColor(139, 92, 246) // Purple
+            pdf.rect(0, 0, pageWidth, 40, 'F')
+            pdf.setTextColor(255, 255, 255)
+            pdf.setFontSize(24)
+            pdf.setFont('helvetica', 'bold')
+            pdf.text('VeriFin', 15, 20)
+            pdf.setFontSize(12)
+            pdf.setFont('helvetica', 'normal')
+            pdf.text('Company Comparison Report', 15, 30)
 
-            // Create PDF
-            const pdf = new jsPDF('p', 'mm', 'a4')
-            const pdfWidth = pdf.internal.pageSize.getWidth()
-            const pdfHeight = pdf.internal.pageSize.getHeight()
+            yPosition = 50
 
-            // Calculate dimensions to fit aspect ratio
-            const imgWidth = canvas.width
-            const imgHeight = canvas.height
-            const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight)
-
-            const imgX = (pdfWidth - imgWidth * ratio) / 2
-            const imgY = 10
-
-            // Add Header
+            // ========== COMPANY HEADERS ==========
+            // Company 1
+            pdf.setFillColor(139, 92, 246) // Purple
+            pdf.roundedRect(15, yPosition, 85, 35, 3, 3, 'F')
+            pdf.setTextColor(255, 255, 255)
             pdf.setFontSize(16)
-            pdf.setTextColor(41, 98, 255) // Blue
-            pdf.text('VeriFin Comparison Report', 15, 10)
+            pdf.setFont('helvetica', 'bold')
+            pdf.text(data.company1.name, 20, yPosition + 10)
+            pdf.setFontSize(10)
+            pdf.setFont('helvetica', 'normal')
+            pdf.text(`Ticker: ${data.company1.ticker}`, 20, yPosition + 18)
+            pdf.setFontSize(14)
+            pdf.setFont('helvetica', 'bold')
+            pdf.text(String(data.company1.price), 20, yPosition + 28)
 
-            // Add Image
-            // We need to adjust height to fit. If it's too long, we might need multiple pages, 
-            // but for now, fitting to page width is usually best for charts.
-            // Let's fit to width and allow height to flow.
-            const componentWidth = pdfWidth - 20
-            const componentHeight = (imgHeight * componentWidth) / imgWidth
+            // Company 2
+            pdf.setFillColor(16, 185, 129) // Green
+            pdf.roundedRect(110, yPosition, 85, 35, 3, 3, 'F')
+            pdf.setTextColor(255, 255, 255)
+            pdf.setFontSize(16)
+            pdf.setFont('helvetica', 'bold')
+            pdf.text(data.company2.name, 115, yPosition + 10)
+            pdf.setFontSize(10)
+            pdf.setFont('helvetica', 'normal')
+            pdf.text(`Ticker: ${data.company2.ticker}`, 115, yPosition + 18)
+            pdf.setFontSize(14)
+            pdf.setFont('helvetica', 'bold')
+            pdf.text(String(data.company2.price), 115, yPosition + 28)
 
-            // Check if height exceeds page
-            if (componentHeight > pdfHeight - 30) {
-                // Multi-page logic could go here, but for now let's just scale down or clip
-                // For simple chart + table, it usually fits on one A4 if scaled
+            yPosition += 45
+
+            // ========== KEY METRICS COMPARISON TABLE ==========
+            pdf.setTextColor(0, 0, 0)
+            pdf.setFontSize(14)
+            pdf.setFont('helvetica', 'bold')
+            pdf.text('Key Metrics Comparison', 15, yPosition)
+            yPosition += 10
+
+            // Table Header
+            pdf.setFillColor(240, 240, 240)
+            pdf.rect(15, yPosition, pageWidth - 30, 8, 'F')
+            pdf.setFontSize(10)
+            pdf.setFont('helvetica', 'bold')
+            pdf.text(data.company1.ticker, 25, yPosition + 6)
+            pdf.text('Metric', pageWidth / 2 - 15, yPosition + 6, { align: 'center' })
+            pdf.text(data.company2.ticker, pageWidth - 35, yPosition + 6, { align: 'right' })
+            yPosition += 10
+
+            // Metrics Rows
+            const metrics = [
+                ['Market Cap', data.company1.marketCap, data.company2.marketCap],
+                ['Price', data.company1.price, data.company2.price],
+                ['Change', `${data.company1.change} (${data.company1.change_pct})`, `${data.company2.change} (${data.company2.change_pct})`],
+                ['P/E Ratio', String(data.company1.pe_ratio), String(data.company2.pe_ratio)],
+                ['Volume', data.company1.volume, data.company2.volume],
+                ['52W High', data.company1['52_week_high'], data.company2['52_week_high']],
+                ['52W Low', data.company1['52_week_low'], data.company2['52_week_low']],
+            ]
+
+            pdf.setFont('helvetica', 'normal')
+            pdf.setFontSize(9)
+
+            metrics.forEach(([metric, val1, val2], index) => {
+                if (index % 2 === 0) {
+                    pdf.setFillColor(250, 250, 250)
+                    pdf.rect(15, yPosition, pageWidth - 30, 8, 'F')
+                }
+
+                pdf.setTextColor(100, 100, 100)
+                pdf.text(String(val1), 25, yPosition + 6)
+                pdf.setTextColor(0, 0, 0)
+                pdf.setFont('helvetica', 'bold')
+                pdf.text(String(metric), pageWidth / 2 - 15, yPosition + 6, { align: 'center' })
+                pdf.setFont('helvetica', 'normal')
+                pdf.setTextColor(100, 100, 100)
+                pdf.text(String(val2), pageWidth - 35, yPosition + 6, { align: 'right' })
+
+                yPosition += 8
+            })
+
+            yPosition += 10
+
+            // ========== SECTOR & INDUSTRY INFO ==========
+            pdf.setTextColor(0, 0, 0)
+            pdf.setFontSize(12)
+            pdf.setFont('helvetica', 'bold')
+            pdf.text('Company Overview', 15, yPosition)
+            yPosition += 8
+
+            pdf.setFontSize(9)
+            pdf.setFont('helvetica', 'normal')
+            pdf.text(`Sector: ${data.company1.sector} vs ${data.company2.sector}`, 15, yPosition)
+            yPosition += 6
+            pdf.text(`Industry: ${data.company1.industry} vs ${data.company2.industry}`, 15, yPosition)
+            yPosition += 6
+            pdf.text(`Type: ${data.company1.type} vs ${data.company2.type}`, 15, yPosition)
+            yPosition += 15
+
+            // ========== ANALYSIS (if available) ==========
+            if (data.analysis) {
+                pdf.setFontSize(12)
+                pdf.setFont('helvetica', 'bold')
+                pdf.text('AI Analysis', 15, yPosition)
+                yPosition += 8
+
+                pdf.setFontSize(9)
+                pdf.setFont('helvetica', 'normal')
+
+                const analysisPoints = [
+                    ['Valuation', data.analysis.valuation],
+                    ['Growth', data.analysis.growth],
+                    ['Risk', data.analysis.risk],
+                    ['Recommendation', data.analysis.recommendation]
+                ]
+
+                analysisPoints.forEach(([label, value]) => {
+                    if (yPosition > pageHeight - 30) {
+                        pdf.addPage()
+                        yPosition = 20
+                    }
+                    pdf.setFont('helvetica', 'bold')
+                    pdf.text(`${label}:`, 15, yPosition)
+                    pdf.setFont('helvetica', 'normal')
+                    const lines = pdf.splitTextToSize(String(value), pageWidth - 30)
+                    pdf.text(lines, 15, yPosition + 5)
+                    yPosition += 5 + (lines.length * 5) + 3
+                })
             }
 
-            pdf.addImage(imgData, 'PNG', 10, 20, componentWidth, componentHeight)
+            // ========== DISCLAIMER ==========
+            if (yPosition > pageHeight - 60) {
+                pdf.addPage()
+                yPosition = 20
+            }
 
-            // Footer
+            pdf.setFillColor(255, 240, 240)
+            pdf.roundedRect(15, yPosition, pageWidth - 30, 45, 2, 2, 'F')
+            pdf.setTextColor(200, 0, 0)
+            pdf.setFontSize(11)
+            pdf.setFont('helvetica', 'bold')
+            pdf.text('⚠️ IMPORTANT DISCLAIMER', 20, yPosition + 7)
+            yPosition += 12
+            pdf.setTextColor(80, 80, 80)
             pdf.setFontSize(8)
-            pdf.setTextColor(150)
-            pdf.text(`Generated by VeriFin • ${new Date().toLocaleString()}`, pdfWidth / 2, pdfHeight - 10, { align: 'center' })
+            pdf.setFont('helvetica', 'normal')
+            const disclaimerText = pdf.splitTextToSize(
+                'This comparison report is for informational and educational purposes only and does not constitute financial, investment, or legal advice. The content is based on publicly available data and should not be used as the sole basis for investment decisions. Users should consult with qualified financial professionals before making any investment decisions. VeriFin Inc. does not guarantee the accuracy, completeness, or timeliness of the information. Investing involves risk, including potential loss of principal.',
+                pageWidth - 40
+            )
+            pdf.text(disclaimerText, 20, yPosition)
 
-            pdf.save(`${data.company1.ticker}_vs_${data.company2.ticker}_Diff.pdf`)
+            // ========== FOOTER ON ALL PAGES ==========
+            const totalPages = pdf.internal.pages.length - 1
+            for (let i = 1; i <= totalPages; i++) {
+                pdf.setPage(i)
+                pdf.setFontSize(8)
+                pdf.setTextColor(150, 150, 150)
+                pdf.text(
+                    `Generated by VeriFin • ${new Date().toLocaleString()} • Page ${i} of ${totalPages}`,
+                    pageWidth / 2,
+                    pageHeight - 10,
+                    { align: 'center' }
+                )
+                pdf.setTextColor(100, 100, 100)
+                pdf.text(
+                    '© 2026 VeriFin Inc. All rights reserved.',
+                    pageWidth / 2,
+                    pageHeight - 5,
+                    { align: 'center' }
+                )
+            }
+
+            pdf.save(`${data.company1.ticker}_vs_${data.company2.ticker}_Comparison_${new Date().toISOString().split('T')[0]}.pdf`)
+
         } catch (error) {
             console.error('PDF generation error:', error)
             alert('Failed to generate PDF')
