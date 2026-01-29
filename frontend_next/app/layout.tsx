@@ -9,7 +9,12 @@ export const metadata: Metadata = {
     description: 'AI-powered financial analysis and company insights platform',
     keywords: ['finance', 'stocks', 'analysis', 'AI', 'investing'],
     authors: [{ name: 'VeriFin Team' }],
-    viewport: 'width=device-width, initial-scale=1',
+}
+
+// Viewport configuration (separate export for Next.js 14+)
+export const viewport = {
+    width: 'device-width',
+    initialScale: 1,
 }
 
 export default function RootLayout({
