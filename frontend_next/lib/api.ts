@@ -1,5 +1,5 @@
 // API Configuration
-const API_BASE = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000'
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://verifin-backend.onrender.com'
 
 // API Response interface - supports both data and response fields
 export interface ApiResponse<T = any> {

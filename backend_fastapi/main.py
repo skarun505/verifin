@@ -38,10 +38,15 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# CORS Configuration - CRITICAL for Netlify frontend
+# CORS Configuration - Allow Vercel frontend and local development
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # TODO: Replace with Netlify domain in production
+    allow_origins=[
+        "https://verifin.vercel.app",  # Vercel production
+        "https://*.vercel.app",         # All Vercel preview deployments
+        "http://localhost:3000",        # Local development
+        "http://localhost:8000",        # Local backend
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
