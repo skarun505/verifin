@@ -132,7 +132,7 @@ def get_real_stock_data(ticker: str):
 
         # If we still have no price, return None (real data unavailable)
         if 'current_price' not in data:
-             print(f"❌ Critical Price Data Missing for {ticker}. Market might be closed or ticker invalid.")
+             print(f"❌ Critical Price Data Missing for {ticker}. Ticker may be invalid or delisted.")
              return None
 
         # 2. Fetch METADATA using .info (Slow, fragile)
@@ -400,6 +400,19 @@ async def resolve_company(query: CompanyQuery):
     """
     try:
         company_name = query.query.strip()
+        
+        # Early validation - check if user is searching for project name itself
+        if company_name.upper() in ["VERIFIN", "VERIFIN.NS", "VERIFIN.BO"]:
+            return {
+                "success": False,
+                "message": "VERIFIN is the name of this financial analysis platform, not a company ticker.",
+                "error": "INVALID_SEARCH",
+                "suggestions": [
+                    "Try searching for real companies like: Apple, Microsoft, Google, Amazon, Tesla",
+                    "Try Indian companies: TCS, Infosys, Wipro, Reliance, HDFC Bank, Airtel",
+                    "Enter a valid company name or ticker symbol"
+                ]
+            }
         
         # Comprehensive company database - 100+ companies (Indian, Global, Nifty 50, Sensex)
         companies = {
